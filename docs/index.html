@@ -158,6 +158,128 @@
   <div class="legend" id="trend-legend"></div>
 </div>
 
+<!-- ════════════ ADDON: 섹터 로테이션 RRG (제거하려면 이 주석부터 아래 /ADDON 주석까지 통째로 삭제) ════════════ -->
+<style>
+  #rrg-addon { margin-top: 30px; }
+  #rrg-addon .rrg-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 12px 10px; }
+  #rrg-addon .rrg-ctrls { display: flex; gap: 6px; flex-wrap: wrap; }
+  #rrg-addon button { background: var(--bg); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 5px 13px; font-size: 13px; cursor: pointer; }
+  #rrg-addon button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  #rrg-addon .rrg-help { color: var(--muted); font-size: 12.5px; line-height: 1.65; margin-top: 10px; }
+  #rrg-addon .rrg-help b { color: var(--text); }
+</style>
+<section id="rrg-addon">
+  <div class="section-head">
+    <div><h2>🧭 섹터 로테이션 (RRG)</h2>
+      <div class="h2-sub">ACWI 대비 상대강도(가로축) × 그 모멘텀(세로축) · 점은 시계방향으로 회전 · 꼬리 = 최근 약 1개월 궤적</div></div>
+    <div class="rrg-ctrls" id="rrg-groups"></div>
+  </div>
+  <div class="rrg-box">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px"><div class="rrg-ctrls" id="rrg-wins"></div></div>
+    <div id="rrg-chart"></div>
+  </div>
+  <div class="rrg-help">
+    <b>주도(우상)</b> → <b>약화(우하)</b> → <b>후퇴(좌하)</b> → <b>개선(좌상)</b> 순으로 시계방향 회전합니다.
+    오른쪽 위(주도) 쪽으로 올라가는 섹터에 돈이 들어오는 중, 왼쪽 아래(후퇴)로 내려가는 섹터에서 돈이 빠지는 중입니다.
+    실제 자금 데이터가 아닌 가격 기반 근사치(JdK RS-Ratio/Momentum 방식)입니다.
+  </div>
+</section>
+<script>
+(function () {
+  const PAL = ["#5b9cff","#4ade80","#f87171","#fbbf24","#a78bfa","#34d399","#f472b6","#22d3ee","#fb923c","#e879f9","#94a3b8"];
+  const GROUPS = [["us_sector","미국 섹터"],["region","글로벌 지역"],["theme","테마"]];
+  const TAIL = 6, STEP = 5;   // 꼬리 6개 점을 주간(5거래일) 간격으로 → 약 6주 궤적
+  const LOOKBACKS = [
+    { key: "s", label: "단기(1개월)", L: 25, M: 10 },
+    { key: "m", label: "중기(2개월)", L: 50, M: 15 },
+  ];
+  let group = "us_sector", mode = "s";
+  const curLB = () => LOOKBACKS.find(x => x.key === mode);
+  const root = document.getElementById("rrg-addon");
+  if (!root) return;
+
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+  // null 안전 단순이동평균 (창 안에 빈 값 있으면 null)
+  const sma = (arr, w) => arr.map((_, i) => {
+    if (i < w - 1) return null;
+    const s = arr.slice(i - w + 1, i + 1);
+    return s.some(x => x == null) ? null : mean(s);
+  });
+
+  function compute(etf, bench) {
+    const { L, M } = curLB();
+    const n = Math.min(etf.hist.length, bench.length);
+    const e = etf.hist.slice(-n), b = bench.slice(-n);
+    const rs = e.map((v, k) => v / b[k]);                          // 상대강도
+    const rsMa = sma(rs, L);
+    const ratio = rs.map((v, i) => rsMa[i] != null ? 100 * v / rsMa[i] : null);  // RS-Ratio: 자기 MA 대비
+    const ratMa = sma(ratio, M);
+    const mom = ratio.map((v, i) => (v != null && ratMa[i] != null) ? 100 * v / ratMa[i] : null);  // RS-Momentum
+    return { ratio, mom, n };
+  }
+
+  function render() {
+    let data;
+    try { data = DATA; } catch (e) { return false; }   // DATA가 아직 로드 전이면 대기
+    if (!data || !data.etfs) return false;
+    const bench = (data.etfs.find(x => x.ticker === "ACWI") || {}).hist;
+    if (!bench) return true;
+    const items = data.etfs.filter(x => x.group === group && x.ticker !== "ACWI");
+    const series = items.map((etf, idx) => {
+      const { ratio, mom, n } = compute(etf, bench);
+      const pts = [];
+      for (let k = TAIL - 1; k >= 0; k--) { const i = n - 1 - k * STEP; if (i >= 0 && ratio[i] != null && mom[i] != null) pts.push([ratio[i], mom[i]]); }
+      return { etf, pts, color: PAL[idx % PAL.length] };
+    }).filter(s => s.pts.length);
+
+    const xs = series.flatMap(s => s.pts.map(p => p[0])), ys = series.flatMap(s => s.pts.map(p => p[1]));
+    const r = Math.max(1.2, ...xs.map(v => Math.abs(v - 100)), ...ys.map(v => Math.abs(v - 100))) * 1.15;
+    const W = 720, H = 470, M = 36;
+    const X = v => M + (v - (100 - r)) / (2 * r) * (W - 2 * M);
+    const Y = v => H - M - (v - (100 - r)) / (2 * r) * (H - 2 * M);
+    const cx = X(100), cy = Y(100);
+    const quad = `
+      <rect x="${cx}" y="${M}" width="${W - M - cx}" height="${cy - M}" fill="rgba(74,222,128,.07)"/>
+      <rect x="${cx}" y="${cy}" width="${W - M - cx}" height="${H - M - cy}" fill="rgba(251,191,36,.07)"/>
+      <rect x="${M}" y="${cy}" width="${cx - M}" height="${H - M - cy}" fill="rgba(248,113,113,.07)"/>
+      <rect x="${M}" y="${M}" width="${cx - M}" height="${cy - M}" fill="rgba(91,156,255,.07)"/>
+      <line x1="${cx}" y1="${M}" x2="${cx}" y2="${H - M}" stroke="#3a4357"/>
+      <line x1="${M}" y1="${cy}" x2="${W - M}" y2="${cy}" stroke="#3a4357"/>
+      <text x="${W - M - 6}" y="${M + 16}" fill="#4ade80" font-size="12.5" text-anchor="end" font-weight="700">주도 Leading</text>
+      <text x="${W - M - 6}" y="${H - M - 9}" fill="#fbbf24" font-size="12.5" text-anchor="end" font-weight="700">약화 Weakening</text>
+      <text x="${M + 6}" y="${H - M - 9}" fill="#f87171" font-size="12.5" font-weight="700">후퇴 Lagging</text>
+      <text x="${M + 6}" y="${M + 16}" fill="#5b9cff" font-size="12.5" font-weight="700">개선 Improving</text>`;
+    const body = series.map(s => {
+      const path = s.pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" ");
+      const last = s.pts[s.pts.length - 1];
+      const dots = s.pts.map((p, i) => {
+        const isLast = i === s.pts.length - 1;
+        return `<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="${isLast ? 5 : 2}" fill="${s.color}" opacity="${isLast ? 1 : 0.3 + 0.5 * i / s.pts.length}"/>`;
+      }).join("");
+      return `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="1.6" opacity="0.5"/>${dots}
+        <text x="${(X(last[0]) + 8).toFixed(1)}" y="${(Y(last[1]) + 4).toFixed(1)}" fill="${s.color}" font-size="11.5" font-weight="700">${s.etf.name}</text>`;
+    }).join("");
+    root.querySelector("#rrg-chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${quad}${body}</svg>`;
+    return true;
+  }
+
+  function paintCtrls() {
+    root.querySelector("#rrg-groups").innerHTML = GROUPS.map(([k, l]) => `<button data-g="${k}" class="${k === group ? "active" : ""}">${l}</button>`).join("");
+    root.querySelector("#rrg-wins").innerHTML = LOOKBACKS.map(lb => `<button data-w="${lb.key}" class="${lb.key === mode ? "active" : ""}">${lb.label}</button>`).join("");
+  }
+  root.addEventListener("click", e => {
+    const g = e.target.dataset.g, w = e.target.dataset.w;
+    if (!g && !w) return;
+    if (g) group = g; if (w) mode = w;
+    paintCtrls(); render();
+  });
+  paintCtrls();
+  const t = setInterval(() => { if (render()) clearInterval(t); }, 120);
+  setTimeout(() => clearInterval(t), 10000);
+})();
+</script>
+<!-- ════════════ /ADDON: 섹터 로테이션 RRG ════════════ -->
+
 <h2>미국 11개 섹터</h2>
 <div class="h2-sub">SPDR 섹터 ETF · 색상 = 선택한 기간 수익률 · 미니차트 = 최근 1개월</div>
 <div class="grid" id="grid-us_sector"></div>
