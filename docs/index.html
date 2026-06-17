@@ -124,6 +124,16 @@
   .news li { list-style: none; padding: 7px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
   .news .src { color: var(--muted); font-size: 11.5px; margin-left: 8px; }
   .news .orig { color: var(--muted); font-size: 11.5px; margin-top: 2px; opacity: .75; }
+  .holdings h4 { font-size: 14px; margin: 18px 0 8px; }
+  .holdings .hold-note { color: var(--muted); font-size: 11.5px; font-weight: 400; margin-left: 6px; }
+  .hold-grid { display: grid; gap: 7px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .hold { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px 6px; }
+  .hold-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .hold .h-tk { font-weight: 800; font-size: 13px; }
+  .hold .h-ret { font-weight: 700; font-size: 13px; }
+  .hold .h-nm { font-size: 11.5px; color: var(--muted); margin: 1px 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hold svg { display: block; width: 100%; height: 22px; opacity: .8; }
+  .hold .h-sub { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -134,7 +144,7 @@
 <p class="note">
   수익률(모멘텀) × 거래대금 급증률로 자금이 몰리는 섹터를 추적합니다.
   거래대금 비율 = 최근 5일 평균 거래대금 ÷ 20일 평균 (1.0 초과 = 평소보다 거래 활발).
-  상대수익률은 전세계 지수(ACWI) 대비. <b>카드·막대·표를 클릭하면 일봉 차트와 관련 뉴스가 열립니다.</b>
+  상대수익률은 전세계 지수(ACWI) 대비. <b>카드·막대·표를 클릭하면 일봉 차트 + 대표 종목 + 관련 뉴스가 열립니다.</b>
 </p>
 
 <div class="periods" id="periods"></div>
@@ -481,6 +491,7 @@ function renderModal() {
       `<button class="${w.days === modalWin ? "active" : ""}" onclick="setModalWin(${w.days})">${w.label}</button>`).join("")}
     </div>
     ${candleSVG(e, modalWin + 1)}
+    ${holdingsHTML(e)}
     <div class="news">
       <h4>📰 관련 뉴스</h4>
       <ul style="padding:0">
@@ -490,6 +501,26 @@ function renderModal() {
         ).join("") : `<li style="color:var(--muted)">수집된 뉴스가 없습니다.</li>`}
       </ul>
     </div>`;
+}
+function holdingsHTML(e) {
+  if (!e.holdings || !e.holdings.length) return "";
+  const krw = t => t.endsWith(".KS");
+  const priceStr = h => krw(h.ticker)
+    ? "₩" + Math.round(h.price).toLocaleString()
+    : "$" + h.price.toFixed(2);
+  const cards = e.holdings.map(h => `
+    <div class="hold" title="${h.name} ${h.ticker}">
+      <div class="hold-top"><span class="h-tk">${h.ticker.replace(".KS", "")}</span>
+        <span class="h-ret ${cls(h.r1d)}">${fmt(h.r1d)}</span></div>
+      <div class="h-nm">${h.name}</div>
+      ${spark(h.spark)}
+      <div class="h-sub"><span>${priceStr(h)}</span>
+        <span>1주 <b class="${cls(h.r1w)}">${fmt(h.r1w)}</b></span></div>
+    </div>`).join("");
+  return `<div class="holdings">
+    <h4>🏢 대표 종목 <span class="hold-note">일간 등락순 · 일봉 기준</span></h4>
+    <div class="hold-grid">${cards}</div>
+  </div>`;
 }
 function setModalWin(d) { modalWin = d; renderModal(); }
 function closeModal() {

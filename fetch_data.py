@@ -50,6 +50,40 @@ TICKERS = [
     ("BOTZ", "로봇/AI",       "theme", "AI robotics stocks"),
 ]
 
+# ETF별 대표 구성종목 (티커, 한글명) — 모달에서 섹터와 함께 표시. 중복은 자동 dedup.
+CONSTITUENTS = {
+    "XLK":  [("AAPL", "애플"), ("MSFT", "마이크로소프트"), ("NVDA", "엔비디아"), ("AVGO", "브로드컴"), ("ORCL", "오라클"), ("CRM", "세일즈포스")],
+    "XLF":  [("BRK-B", "버크셔"), ("JPM", "JP모건"), ("V", "비자"), ("MA", "마스터카드"), ("BAC", "뱅크오브아메리카"), ("WFC", "웰스파고")],
+    "XLV":  [("LLY", "일라이릴리"), ("UNH", "유나이티드헬스"), ("JNJ", "존슨앤존슨"), ("ABBV", "애브비"), ("MRK", "머크"), ("PFE", "화이자")],
+    "XLY":  [("AMZN", "아마존"), ("TSLA", "테슬라"), ("HD", "홈디포"), ("MCD", "맥도날드"), ("NKE", "나이키"), ("SBUX", "스타벅스")],
+    "XLP":  [("PG", "P&G"), ("COST", "코스트코"), ("WMT", "월마트"), ("KO", "코카콜라"), ("PEP", "펩시코"), ("PM", "필립모리스")],
+    "XLE":  [("XOM", "엑슨모빌"), ("CVX", "셰브론"), ("COP", "코노코필립스"), ("SLB", "슐럼버거"), ("EOG", "EOG"), ("MPC", "마라톤페트롤리엄")],
+    "XLI":  [("GE", "GE에어로스페이스"), ("CAT", "캐터필러"), ("RTX", "RTX"), ("HON", "허니웰"), ("UNP", "유니온퍼시픽"), ("BA", "보잉")],
+    "XLB":  [("LIN", "린데"), ("SHW", "셔윈윌리엄스"), ("FCX", "프리포트맥모란"), ("ECL", "에코랩"), ("NEM", "뉴몬트"), ("APD", "에어프로덕츠")],
+    "XLU":  [("NEE", "넥스트에라"), ("SO", "서던컴퍼니"), ("DUK", "듀크에너지"), ("CEG", "컨스텔레이션"), ("AEP", "AEP"), ("D", "도미니언")],
+    "XLRE": [("PLD", "프로로지스"), ("AMT", "아메리칸타워"), ("EQIX", "에퀴닉스"), ("WELL", "웰타워"), ("SPG", "사이먼프로퍼티"), ("PSA", "퍼블릭스토리지")],
+    "XLC":  [("META", "메타"), ("GOOGL", "알파벳"), ("NFLX", "넷플릭스"), ("DIS", "디즈니"), ("T", "AT&T"), ("VZ", "버라이즌")],
+    "SMH":  [("NVDA", "엔비디아"), ("TSM", "TSMC"), ("AVGO", "브로드컴"), ("AMD", "AMD"), ("ASML", "ASML"), ("MU", "마이크론")],
+    "IGV":  [("MSFT", "마이크로소프트"), ("CRM", "세일즈포스"), ("ORCL", "오라클"), ("ADBE", "어도비"), ("NOW", "서비스나우"), ("PLTR", "팔란티어")],
+    "IBB":  [("AMGN", "암젠"), ("GILD", "길리어드"), ("VRTX", "버텍스"), ("REGN", "리제네론"), ("BIIB", "바이오젠"), ("MRNA", "모더나")],
+    "ITA":  [("RTX", "RTX"), ("BA", "보잉"), ("LMT", "록히드마틴"), ("GD", "제너럴다이내믹스"), ("NOC", "노스럽그루먼"), ("GE", "GE에어로스페이스")],
+    "ICLN": [("FSLR", "퍼스트솔라"), ("ENPH", "엔페이즈"), ("NEE", "넥스트에라"), ("SEDG", "솔라엣지"), ("PLUG", "플러그파워")],
+    "GDX":  [("NEM", "뉴몬트"), ("GOLD", "배릭골드"), ("AEM", "애그니코이글"), ("FNV", "프랑코네바다"), ("WPM", "휘튼프레셔스")],
+    "URA":  [("CCJ", "카메코"), ("LEU", "센트러스"), ("NXE", "넥스젠에너지"), ("UEC", "우라늄에너지"), ("OKLO", "오클로")],
+    "JETS": [("DAL", "델타항공"), ("UAL", "유나이티드항공"), ("AAL", "아메리칸항공"), ("LUV", "사우스웨스트"), ("BA", "보잉")],
+    "KWEB": [("BABA", "알리바바"), ("PDD", "핀둬둬"), ("JD", "징둥"), ("BIDU", "바이두"), ("TCEHY", "텐센트"), ("NTES", "넷이즈")],
+    "BOTZ": [("NVDA", "엔비디아"), ("ISRG", "인튜이티브서지컬"), ("ABB", "ABB"), ("KEYS", "키사이트"), ("TER", "테러다인")],
+    "SPY":  [("AAPL", "애플"), ("MSFT", "마이크로소프트"), ("NVDA", "엔비디아"), ("AMZN", "아마존"), ("META", "메타")],
+    "ACWI": [("AAPL", "애플"), ("MSFT", "마이크로소프트"), ("NVDA", "엔비디아"), ("AMZN", "아마존"), ("TSM", "TSMC")],
+    "EFA":  [("ASML", "ASML"), ("NVO", "노보노디스크"), ("SAP", "SAP"), ("TM", "도요타"), ("AZN", "아스트라제네카")],
+    "EEM":  [("TSM", "TSMC"), ("BABA", "알리바바"), ("TCEHY", "텐센트"), ("INFY", "인포시스"), ("PDD", "핀둬둬")],
+    "VGK":  [("ASML", "ASML"), ("NVO", "노보노디스크"), ("SAP", "SAP"), ("AZN", "아스트라제네카"), ("HSBC", "HSBC")],
+    "EWJ":  [("TM", "도요타"), ("SONY", "소니"), ("MUFG", "미쓰비시UFJ"), ("HMC", "혼다"), ("MFG", "미즈호")],
+    "FXI":  [("BABA", "알리바바"), ("TCEHY", "텐센트"), ("JD", "징둥"), ("BIDU", "바이두"), ("PDD", "핀둬둬")],
+    "EWY":  [("005930.KS", "삼성전자"), ("000660.KS", "SK하이닉스"), ("005380.KS", "현대차"), ("035420.KS", "네이버"), ("051910.KS", "LG화학")],
+    "INDA": [("INFY", "인포시스"), ("HDB", "HDFC뱅크"), ("IBN", "ICICI뱅크"), ("WIT", "위프로"), ("RDY", "닥터레디스")],
+}
+
 BENCHMARK = "ACWI"  # 상대강도 기준
 HIST_DAYS = 130     # 차트용 일봉 보관 일수 (약 6개월)
 NEWS_PER_TICKER = 5
@@ -190,14 +224,35 @@ def build_metrics(data: dict) -> dict:
     }
 
 
+def build_stock_metrics(data: dict) -> dict:
+    """대표 종목용 경량 지표 (가격 + 등락 + 미니 스파크라인만)."""
+    adj, dates = data["adj"], data["dates"]
+    return {
+        "price": round(adj[-1], 2),
+        "r1d": pct(adj, 1),
+        "r1w": pct(adj, 5),
+        "r1m": pct(adj, 21),
+        "spark": [round(c, 2) for c in adj[-21:]],
+    }
+
+
 def main():
-    print(f"{len(TICKERS)}개 ETF 시세 수집 중...")
+    # 대표 종목 전체를 중복 제거해 한 번씩만 수집
+    uniq_stocks = sorted({s for lst in CONSTITUENTS.values() for s, _ in lst})
+
+    print(f"{len(TICKERS)}개 ETF + 대표 종목 {len(uniq_stocks)}개 시세 수집 중...")
     with ThreadPoolExecutor(max_workers=6) as ex:
         quotes = list(ex.map(lambda t: (t, fetch_quotes(t[0])), TICKERS))
+        stock_raw = dict(zip(uniq_stocks, ex.map(fetch_quotes, uniq_stocks)))
         print("섹터 뉴스 수집 중...")
         news = list(ex.map(lambda t: fetch_news(t[3]), TICKERS))
         print("뉴스 한국어 번역 중...")
         news = list(ex.map(translate_news, news))
+
+    # 종목 경량 지표 맵
+    stock_metrics = {
+        s: build_stock_metrics(d) for s, d in stock_raw.items() if d is not None
+    }
 
     etfs, failed = [], []
     bench = None
@@ -207,7 +262,15 @@ def main():
             failed.append(ticker)
             continue
         m = build_metrics(data)
-        m.update({"ticker": ticker, "name": name, "group": group, "news": news_items})
+        # 대표 종목: 수집 성공한 것만, 일간 등락순 정렬
+        holdings = [
+            {"ticker": st, "name": nm, **stock_metrics[st]}
+            for st, nm in CONSTITUENTS.get(ticker, [])
+            if st in stock_metrics
+        ]
+        holdings.sort(key=lambda h: h["r1d"] if h["r1d"] is not None else -999, reverse=True)
+        m.update({"ticker": ticker, "name": name, "group": group,
+                  "news": news_items, "holdings": holdings})
         etfs.append(m)
         if ticker == BENCHMARK:
             bench = m
