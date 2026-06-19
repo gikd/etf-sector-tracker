@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>글로벌 종목 워치리스트 (방산) — 트라이얼</title>
+<style>
+  :root {
+    --bg: #0e1117; --card: #181c25; --card-hover: #1f2430;
+    --text: #e6e9ef; --muted: #8b93a3; --border: #262c3a;
+    --accent: #5b9cff; --up: #4ade80; --down: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+    padding: 24px 20px 60px; max-width: 1180px; margin: 0 auto;
+  }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  .updated { color: var(--muted); font-size: 13px; }
+  .note { color: var(--muted); font-size: 13px; margin: 6px 0 22px; line-height: 1.6; }
+  .note a { color: var(--accent); text-decoration: none; }
+  h2 { font-size: 17px; margin: 26px 0 4px; }
+  .grp { color: var(--muted); font-size: 13px; margin: 18px 0 10px; font-weight: 600; }
+  .grp .cnt { color: var(--border); font-weight: 400; }
+
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 11px;
+    padding: 11px 13px 9px; transition: transform .08s, border-color .08s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: #3a4357; }
+  .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .ret { font-weight: 800; font-size: 15px; flex-shrink: 0; }
+  .card .tk { color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .card svg { display: block; width: 100%; height: 38px; margin: 7px 0 4px; }
+  .card .sub { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+  .card .px { color: var(--text); font-weight: 600; }
+  .pos { color: var(--up); } .neg { color: var(--down); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ 글로벌 종목 워치리스트 · 방산</h1>
+  <span class="updated" id="updated"></span>
+</header>
+<p class="note">
+  구글시트 참고용으로 만든 <b>트라이얼</b> 페이지입니다 — 개별 종목을 국가/규모별로 묶어 일봉 시세를 봅니다.
+  카드 = 종목명 · 당일등락(큰 글씨) · 100일 추이 · 현지통화 가격 · 1주/1개월. 그룹 내 당일 등락순 정렬.
+  <a href="index.html">← 섹터 대시보드로</a>
+</p>
+<div id="board"></div>
+<footer>
+  데이터: Yahoo Finance 일봉 · 1일 1회 갱신 · 현지 통화 기준(한국 ₩, 미국 $, 유럽 € 등).
+  실시간 아닌 종가 기준 참고용입니다.
+</footer>
+
+<script src="watchlist.js"></script>
+<script>
+const CCY = {
+  USD: { s: "$", d: 2 }, KRW: { s: "₩", d: 0 }, EUR: { s: "€", d: 2 },
+  GBp: { s: "", d: 1, suf: "p" }, JPY: { s: "¥", d: 0 }, HKD: { s: "HK$", d: 2 },
+  CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 },
+};
+const fmtPct = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+const cls = v => v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "";
+function fmtPx(v, ccy) {
+  const c = CCY[ccy] || { s: "", d: 2 };
+  return c.s + v.toLocaleString(undefined, { minimumFractionDigits: c.d, maximumFractionDigits: c.d }) + (c.suf || "");
+}
+function spark(values) {
+  const min = Math.min(...values), max = Math.max(...values), range = max - min || 1;
+  const pts = values.map((v, i) =>
+    `${(i / (values.length - 1) * 100).toFixed(1)},${(38 - (v - min) / range * 34 - 2).toFixed(1)}`
+  ).join(" ");
+  const up = values[values.length - 1] >= values[0];
+  return `<svg viewBox="0 0 100 38" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${up ? "var(--up)" : "var(--down)"}" stroke-width="1.6"/></svg>`;
+}
+function card(s) {
+  return `<div class="card">
+    <div class="top"><span class="nm">${s.name}</span><span class="ret ${cls(s.r1d)}">${fmtPct(s.r1d)}</span></div>
+    <div class="tk">${s.ticker}</div>
+    ${spark(s.spark)}
+    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
+      <span>1주 <b class="${cls(s.r1w)}">${fmtPct(s.r1w)}</b> · 1개월 <b class="${cls(s.r1m)}">${fmtPct(s.r1m)}</b></span>
+    </div>
+  </div>`;
+}
+function render(d) {
+  document.getElementById("updated").textContent = "갱신 " + d.updated;
+  let html = "";
+  for (const [theme, groups] of Object.entries(d.themes)) {
+    html += `<h2>${theme}</h2>`;
+    for (const [grp, arr] of Object.entries(groups)) {
+      html += `<div class="grp">${grp} <span class="cnt">· ${arr.length}종목</span></div>
+        <div class="grid">${arr.map(card).join("")}</div>`;
+    }
+  }
+  document.getElementById("board").innerHTML = html;
+}
+fetch("watchlist.json").then(r => r.json()).then(render).catch(() => {
+  if (window.__WATCHLIST__) render(window.__WATCHLIST__);
+  else document.getElementById("board").innerHTML =
+    `<p style="color:#f87171">데이터를 불러올 수 없습니다. python3 fetch_watchlist.py 를 먼저 실행하세요.</p>`;
+});
+</script>
+</body>
+</html>
