@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
-"""[매일] 글로벌 메가캡 시세·모멘텀 갱신.
+"""[매일] 글로벌 메가캡 시세·모멘텀·뉴스 갱신 + 선행 PER 계산.
 
-명단(어떤 종목이 TOP100인지)은 fetch_universe.py가 주 1회 만든
-docs/megacap_universe.json 을 읽어 사용. 이 스크립트는 시세만 일단위로 갱신.
+명단(TOP100)은 fetch_universe.py가 주 1회 만든 docs/megacap_universe.json 사용.
+이 스크립트는 매일: 시세·일봉 캔들·한국어 뉴스 갱신, 명단의 EPS로 올해/내년 PER 계산.
 docs/megacap.json / megacap.js 생성.
 """
 import json
 import time
+import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
-HIST_DAYS = 100
+HIST_DAYS = 130
+NEWS_PER = 5
 API = "https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=1y&interval=1d"
+NEWS_RSS = "https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
 DOCS = Path(__file__).parent / "docs"
 UNIVERSE = DOCS / "megacap_universe.json"
 OUT = DOCS / "megacap.json"
 
 
 def load_members():
-    """주간 명단을 읽음. 없으면 후보군 전체로 폴백."""
     if UNIVERSE.exists():
         u = json.loads(UNIVERSE.read_text(encoding="utf-8"))
         return u["members"], u.get("updated")
@@ -58,46 +61,89 @@ def fetch(sym, retries=3):
             ts = res["timestamp"]
             q = res["indicators"]["quote"][0]
             adj = res["indicators"].get("adjclose", [{}])[0].get("adjclose", q["close"])
-            rows = [(t, a) for t, a in zip(ts, adj) if a is not None]
+            rows = [
+                (t, a, o, h, l, c, v)
+                for t, a, o, h, l, c, v in zip(ts, adj, q["open"], q["high"], q["low"], q["close"], q["volume"])
+                if a is not None and c is not None and v is not None
+            ]
             if len(rows) < 30:
                 return None
-            dates = [datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d") for t, _ in rows]
-            close = [a for _, a in rows]
+            dates = [datetime.fromtimestamp(r[0], tz=timezone.utc).strftime("%Y-%m-%d") for r in rows]
+            close = [r[1] for r in rows]
             high = max(close)
+            n = HIST_DAYS
             return {
                 "price": round(close[-1], 2),
                 "ccy": meta.get("currency", "USD"),
-                "r1d": pct(close, 1),
-                "r1w": pct(close, 5),
-                "r1m": pct(close, 21),
-                "r3m": pct(close, 63),
-                "ytd": ytd_pct(dates, close),
+                "r1d": pct(close, 1), "r1w": pct(close, 5), "r1m": pct(close, 21),
+                "r3m": pct(close, 63), "ytd": ytd_pct(dates, close),
                 "from_high": round((close[-1] / high - 1) * 100, 2),
-                "spark": [round(c, 2) for c in close[-HIST_DAYS:]],
+                "spark": [round(c, 2) for c in close[-21:]],
+                "dates": dates[-n:],
+                "candles": {
+                    "o": [round(r[2], 2) for r in rows[-n:]],
+                    "h": [round(r[3], 2) for r in rows[-n:]],
+                    "l": [round(r[4], 2) for r in rows[-n:]],
+                    "c": [round(r[5], 2) for r in rows[-n:]],
+                    "v": [r[6] for r in rows[-n:]],
+                },
             }
         except Exception as e:
             if attempt == retries - 1:
-                print(f"  FAIL {sym}: {e}")
+                print(f"  FAIL 시세 {sym}: {e}")
                 return None
             time.sleep(1.5 * (attempt + 1))
 
 
+def fetch_news(name):
+    """한국어 뉴스(최근 7일) — 종목명(괄호 앞부분)으로 검색. 번역 불필요."""
+    q = name.split("(")[0].strip()
+    try:
+        url = NEWS_RSS.format(q=urllib.parse.quote(f"{q} when:7d"))
+        root = ET.fromstring(http_get(url))
+        items = []
+        for it in root.iter("item"):
+            title = it.findtext("title") or ""
+            src = it.findtext("source") or ""
+            if src and title.endswith(f" - {src}"):
+                title = title[: -len(f" - {src}")]
+            pub = it.findtext("pubDate") or ""
+            try:
+                dt = datetime.strptime(pub, "%a, %d %b %Y %H:%M:%S %Z")
+            except ValueError:
+                dt = datetime.min
+            items.append({"t": title, "u": it.findtext("link") or "", "s": src, "d": dt.strftime("%m-%d"), "_dt": dt})
+        items.sort(key=lambda x: x["_dt"], reverse=True)
+        for x in items:
+            del x["_dt"]
+        return items[:NEWS_PER]
+    except Exception:
+        return []
+
+
+def fwd_pe(price, eps):
+    return round(price / eps, 1) if price and eps and eps > 0 else None
+
+
 def main():
     members, universe_updated = load_members()
-    print(f"메가캡 {len(members)}개 시세 수집 중... (명단 기준 {universe_updated or '폴백'})")
+    print(f"메가캡 {len(members)}개 시세·뉴스 수집 중... (명단 기준 {universe_updated or '폴백'})")
     with ThreadPoolExecutor(max_workers=6) as ex:
-        results = list(ex.map(lambda m: fetch(m["ticker"]), members))
+        quotes = list(ex.map(lambda m: fetch(m["ticker"]), members))
+        news = list(ex.map(lambda m: fetch_news(m["name"]), members))
 
     stocks, failed = [], []
-    for m, d in zip(members, results):
+    for m, d, nw in zip(members, quotes, news):
         if d is None:
             failed.append(m["ticker"])
             continue
-        item = {"name": m["name"], "ticker": m["ticker"], "sector": m["sector"], **d}
+        item = {"name": m["name"], "ticker": m["ticker"], "sector": m["sector"], **d, "news": nw}
         if m.get("mcap_b") is not None:
             item["mcap_b"] = m["mcap_b"]
         if m.get("rank") is not None:
             item["rank"] = m["rank"]
+        item["pe_now"] = fwd_pe(d["price"], m.get("eps_now"))
+        item["pe_next"] = fwd_pe(d["price"], m.get("eps_next"))
         stocks.append(item)
 
     out = {
@@ -109,7 +155,8 @@ def main():
     payload = json.dumps(out, ensure_ascii=False)
     OUT.write_text(payload, encoding="utf-8")
     OUT.with_name("megacap.js").write_text("window.__MEGACAP__ = " + payload + ";", encoding="utf-8")
-    print(f"완료: {len(stocks)}개 저장 → {OUT}" + (f" (실패: {failed})" if failed else ""))
+    size_kb = OUT.stat().st_size // 1024
+    print(f"완료: {len(stocks)}개 저장 → {OUT} ({size_kb}KB)" + (f" (실패: {failed})" if failed else ""))
 
 
 if __name__ == "__main__":

@@ -124,17 +124,25 @@ def main():
                + urllib.parse.quote(",".join(batch)) + "&crumb=" + urllib.parse.quote(crumb))
         d = json.load(op.open(url, timeout=20))
         for r in d["quoteResponse"]["result"]:
-            quotes[r["symbol"]] = (r.get("marketCap"), r.get("currency", "USD"))
+            quotes[r["symbol"]] = {
+                "mc": r.get("marketCap"), "ccy": r.get("currency", "USD"),
+                "eps_now": r.get("epsCurrentYear"),   # 올해 EPS 추정 → 매일 주가로 PER 계산
+                "eps_next": r.get("epsForward"),      # 내년(선행) EPS 추정
+            }
 
-    fx = fx_rates(op, {ccy for mc, ccy in quotes.values()})
+    fx = fx_rates(op, {q["ccy"] for q in quotes.values()})
     print(f"환율(USD당): " + ", ".join(f"{k}={v:.2f}" for k, v in fx.items() if k != "USD"))
 
     ranked = []
     for name, sym, sector in CANDIDATES:
-        mc, ccy = quotes.get(sym, (None, "USD"))
-        usd = to_usd(mc, ccy, fx)
+        q = quotes.get(sym, {})
+        usd = to_usd(q.get("mc"), q.get("ccy", "USD"), fx)
         if usd > 0:
-            ranked.append({"name": name, "ticker": sym, "sector": sector, "mcap_b": round(usd / 1e9, 1)})
+            ranked.append({
+                "name": name, "ticker": sym, "sector": sector,
+                "mcap_b": round(usd / 1e9, 1),
+                "eps_now": q.get("eps_now"), "eps_next": q.get("eps_next"),
+            })
     ranked.sort(key=lambda x: x["mcap_b"], reverse=True)
     members = ranked[:TOP_N]
     for i, m in enumerate(members, 1):

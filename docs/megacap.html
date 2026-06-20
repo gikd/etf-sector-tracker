@@ -50,8 +50,12 @@
   .sec-head .rk { color: var(--muted); font-size: 12px; }
 
   .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px 9px; position: relative; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px 9px; position: relative; cursor: pointer; transition: transform .08s, border-color .08s; }
+  .card:hover { transform: translateY(-2px); border-color: #3a4357; }
   .card.lead { border-color: var(--accent); }
+  .card .per { color: var(--accent); font-weight: 600; }
+  .card .stats3 { gap: 4px; }
+  .card .stats3 span { white-space: nowrap; }
   .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
   .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card .ret { font-weight: 800; font-size: 15px; flex-shrink: 0; }
@@ -65,6 +69,28 @@
   .card .px { color: var(--text); font-weight: 600; }
   .pos { color: var(--up); } .neg { color: var(--down); }
   footer { margin-top: 40px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+  /* 상세 모달 */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 50; display: none;
+    align-items: flex-start; justify-content: center; padding: 4vh 16px; overflow-y: auto; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #141823; border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 880px; padding: 20px 22px 18px; }
+  .modal-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .modal-head h3 { font-size: 19px; }
+  .modal-head .px { font-size: 17px; font-weight: 700; }
+  .modal-head .close { margin-left: auto; cursor: pointer; color: var(--muted); font-size: 22px; background: none; border: none; }
+  .modal-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 12px; }
+  .chip { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--card); border: 1px solid var(--border); }
+  .chip.per { border-color: var(--accent); }
+  .modal .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .modal .tabs button { background: var(--card); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 5px 13px; font-size: 13px; cursor: pointer; }
+  .modal .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .news h4 { font-size: 14px; margin: 18px 0 8px; }
+  .news ul { padding: 0; }
+  .news a { color: var(--text); text-decoration: none; font-size: 13.5px; }
+  .news a:hover { color: var(--accent); }
+  .news li { list-style: none; padding: 7px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+  .news .src { color: var(--muted); font-size: 11.5px; margin-left: 8px; }
 </style>
 </head>
 <body>
@@ -80,7 +106,7 @@
 <p class="note">
   전 세계 시총 최상위 ~100개(큰돈도 쉽게 거래 가능한 초대형주)를 직접 섹터 분류.
   <b>어느 섹터로 돈이 쏠리는지</b>(섹터 강세 순위) → <b>그 안에서 잘 가는 종목</b>(모멘텀순)을 봅니다.
-  기간 버튼으로 1주~YTD 전환. 관측용이며 투자 권유가 아닙니다.
+  기간 버튼으로 1일~YTD 전환. 카드의 PER은 올해→내년 예상(선행). <b>카드 클릭 = 일봉 차트 + 뉴스.</b> 관측용이며 투자 권유가 아닙니다.
 </p>
 
 <div class="periods" id="periods"></div>
@@ -96,6 +122,8 @@
   ‘신고가’ = 52주 고점 대비 −3% 이내. ‘저유동’ = 유통물량 적어 대량 거래 어려움(예: 아람코).
 </footer>
 
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+
 <script src="megacap.js"></script>
 <script>
 const PERIODS = [
@@ -107,7 +135,10 @@ const CCY = {
   GBp: { s: "", d: 1, suf: "p" }, JPY: { s: "¥", d: 0 }, HKD: { s: "HK$", d: 2 },
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
-let DATA = null, period = "r1m";
+let DATA = null, period = "r1w";
+let modalWin = 63, modalTicker = null;
+const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
+const byTicker = t => DATA.stocks.find(s => s.ticker === t);
 
 const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 const cls = v => v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "";
@@ -162,9 +193,16 @@ function renderBars() {
   }).join("");
 }
 
+function perStr(s) {
+  if (s.pe_now && s.pe_next) return `PER ${s.pe_now}→${s.pe_next}`;
+  if (s.pe_next) return `PER 내년 ${s.pe_next}`;
+  if (s.pe_now) return `PER 올해 ${s.pe_now}`;
+  return "";
+}
 function card(s, isLead) {
   const high = s.from_high != null && s.from_high >= -3;
-  return `<div class="card ${isLead ? "lead" : ""}">
+  const per = perStr(s);
+  return `<div class="card ${isLead ? "lead" : ""}" onclick="openModal('${s.ticker}')">
     <div class="top"><span class="nm">${s.name}</span><span class="ret ${cls(s[period])}">${fmt(s[period])}</span></div>
     <div class="tk">${s.ticker}${s.rank ? ` · 시총 ${s.rank}위` : ""}${s.mcap_b ? ` · $${(s.mcap_b / 1000).toFixed(2)}T` : ""}</div>
     <div class="badges">
@@ -172,12 +210,12 @@ function card(s, isLead) {
       ${s.lowliq ? `<span class="badge b-low">저유동</span>` : ""}
     </div>
     ${spark(s.spark)}
-    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
-      <span>1일 <b class="${cls(s.r1d)}">${fmt(s.r1d)}</b></span></div>
-    <div class="sub"><span>1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
-      <span>1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span></div>
-    <div class="sub"><span>3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span>
-      <span>YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span></div>
+    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>${per ? `<span class="per">${per}</span>` : ""}</div>
+    <div class="sub stats3">
+      <span>1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
+      <span>1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span>
+      <span>YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span>
+    </div>
   </div>`;
 }
 
@@ -195,6 +233,78 @@ function renderBoard() {
 }
 
 function renderAll() { renderPeriods(); renderBars(); renderBoard(); }
+
+/* ── 상세 모달: 일봉 캔들 + 선행 PER + 뉴스 ── */
+function candleSVG(s, win) {
+  const c = s.candles;
+  const n = Math.min(win, c.c.length);
+  const o = c.o.slice(-n), h = c.h.slice(-n), l = c.l.slice(-n), cl = c.c.slice(-n), v = c.v.slice(-n);
+  const dates = s.dates.slice(-n);
+  const W = 880, PH = 280, VH = 60, B = 24, T = 10, L = 6, R = 58;
+  const H = T + PH + 8 + VH + B, pw = W - L - R;
+  let pmin = Math.min(...l), pmax = Math.max(...h);
+  const pad = (pmax - pmin) * 0.05 || 1; pmin -= pad; pmax += pad;
+  const vmax = Math.max(...v, 1);
+  const X = i => L + (i + 0.5) / n * pw;
+  const Y = p => T + (pmax - p) / (pmax - pmin) * PH;
+  const cw = Math.max(1.5, pw / n * 0.62);
+  const span = pmax - pmin;
+  const step = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 5000, 50000].find(x => span / x <= 7) || 100000;
+  let grid = "";
+  for (let g = Math.ceil(pmin / step) * step; g <= pmax; g += step)
+    grid += `<line x1="${L}" x2="${L + pw}" y1="${Y(g)}" y2="${Y(g)}" stroke="#222838"/>
+      <text x="${W - R + 6}" y="${Y(g) + 4}" fill="#8b93a3" font-size="11">${g >= 1000 ? (g / 1000).toFixed(0) + "k" : g.toFixed(step < 1 ? 1 : 0)}</text>`;
+  let xl = "";
+  for (let k = 0; k <= 4; k++) {
+    const i = Math.round(k / 4 * (n - 1));
+    xl += `<text x="${X(i)}" y="${H - 6}" fill="#8b93a3" font-size="11" text-anchor="${k === 0 ? "start" : k === 4 ? "end" : "middle"}">${dates[i]?.slice(5)}</text>`;
+  }
+  let body = "";
+  for (let i = 0; i < n; i++) {
+    const up = cl[i] >= o[i], col = up ? "var(--up)" : "var(--down)", x = X(i), yo = Y(o[i]), yc = Y(cl[i]);
+    body += `<line x1="${x}" x2="${x}" y1="${Y(h[i])}" y2="${Y(l[i])}" stroke="${col}" stroke-width="1"/>
+      <rect x="${x - cw / 2}" y="${Math.min(yo, yc)}" width="${cw}" height="${Math.max(1, Math.abs(yo - yc))}" fill="${col}"/>
+      <rect x="${x - cw / 2}" y="${T + PH + 8 + (1 - v[i] / vmax) * VH}" width="${cw}" height="${v[i] / vmax * VH}" fill="${col}" opacity="0.45"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${grid}${xl}
+    <text x="${L}" y="${T + PH + 22}" fill="#8b93a3" font-size="10.5">거래량</text>${body}</svg>`;
+}
+
+function openModal(t) { modalTicker = t; modalWin = 63; renderModal(); document.getElementById("modal-bg").classList.add("open"); document.body.style.overflow = "hidden"; }
+function closeModal() { document.getElementById("modal-bg").classList.remove("open"); document.body.style.overflow = ""; }
+function setModalWin(d) { modalWin = d; renderModal(); }
+function renderModal() {
+  const s = byTicker(modalTicker);
+  if (!s) return;
+  const per = (s.pe_now || s.pe_next)
+    ? `<span class="chip per">선행PER ${s.pe_now ? "올해 " + s.pe_now : ""}${s.pe_now && s.pe_next ? " → " : ""}${s.pe_next ? "내년 " + s.pe_next : ""}</span>` : "";
+  document.getElementById("modal").innerHTML = `
+    <div class="modal-head">
+      <h3>${s.name} <span style="color:var(--muted);font-size:14px">${s.ticker} · ${s.sector}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
+      <span class="px">${fmtPx(s.price, s.ccy)}</span>
+      <span class="${cls(s.r1d)}" style="font-weight:700">${fmt(s.r1d)}</span>
+      <button class="close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-chips">
+      <span class="chip">1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
+      <span class="chip">1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span>
+      <span class="chip">3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span>
+      <span class="chip">YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span>
+      <span class="chip">52주고점대비 <b class="${cls(s.from_high)}">${fmt(s.from_high)}</b></span>
+      ${s.mcap_b ? `<span class="chip">시총 <b>$${(s.mcap_b / 1000).toFixed(2)}T</b></span>` : ""}
+      ${per}
+    </div>
+    <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
+    ${candleSVG(s, modalWin + 1)}
+    <div class="news">
+      <h4>📰 관련 뉴스 (최근 7일)</h4>
+      <ul>${s.news && s.news.length ? s.news.map(nw =>
+        `<li><a href="${nw.u}" target="_blank" rel="noopener">${nw.t}</a><span class="src">${nw.s} · ${nw.d}</span></li>`).join("")
+        : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>
+    </div>`;
+}
+document.getElementById("modal-bg").addEventListener("click", e => { if (e.target.id === "modal-bg") closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
 function boot(d) {
   DATA = d;
