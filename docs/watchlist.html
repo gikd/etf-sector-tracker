@@ -14,13 +14,21 @@
   body {
     background: var(--bg); color: var(--text);
     font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
-    padding: 24px 20px 60px; max-width: 1180px; margin: 0 auto;
+    padding: 18px 20px 60px; max-width: 1180px; margin: 0 auto;
   }
+  .nav { display: flex; gap: 8px; margin-bottom: 16px; }
+  .nav a { text-decoration: none; font-size: 14px; padding: 7px 16px; border-radius: 9px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--card); }
+  .nav a.cur { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
   header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
   h1 { font-size: 22px; font-weight: 700; }
   .updated { color: var(--muted); font-size: 13px; }
   .note { color: var(--muted); font-size: 13px; margin: 6px 0 22px; line-height: 1.6; }
   .note a { color: var(--accent); text-decoration: none; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
+  .tabs button { background: var(--card); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 18px; font-size: 14px; cursor: pointer; }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
   h2 { font-size: 17px; margin: 26px 0 4px; }
   .grp { color: var(--muted); font-size: 13px; margin: 18px 0 10px; font-weight: 600; }
   .grp .cnt { color: var(--border); font-weight: 400; }
@@ -43,15 +51,19 @@
 </style>
 </head>
 <body>
+<div class="nav">
+  <a href="index.html">📊 섹터 대시보드</a>
+  <a href="watchlist.html" class="cur">📋 종목 워치리스트</a>
+</div>
 <header>
-  <h1>🛡️ 글로벌 종목 워치리스트 · 방산</h1>
+  <h1>📋 글로벌 종목 워치리스트</h1>
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
-  구글시트 참고용으로 만든 <b>트라이얼</b> 페이지입니다 — 개별 종목을 국가/규모별로 묶어 일봉 시세를 봅니다.
+  구글시트 참고: 개별 종목을 테마·국가·규모별로 묶어 일봉 시세를 봅니다.
   카드 = 종목명 · 당일등락(큰 글씨) · 100일 추이 · 현지통화 가격 · 1주/1개월. 그룹 내 당일 등락순 정렬.
-  <a href="index.html">← 섹터 대시보드로</a>
 </p>
+<div class="tabs" id="theme-tabs"></div>
 <div id="board"></div>
 <footer>
   데이터: Yahoo Finance 일봉 · 1일 1회 갱신 · 현지 통화 기준(한국 ₩, 미국 $, 유럽 € 등).
@@ -90,17 +102,31 @@ function card(s) {
     </div>
   </div>`;
 }
-function render(d) {
-  document.getElementById("updated").textContent = "갱신 " + d.updated;
+let DATA = null, curTheme = null;
+function renderTabs() {
+  const themes = Object.keys(DATA.themes);
+  document.getElementById("theme-tabs").innerHTML = themes.map(t =>
+    `<button class="${t === curTheme ? "active" : ""}" onclick="setTheme('${t}')">${t}</button>`).join("");
+}
+function renderBoard() {
+  const groups = DATA.themes[curTheme] || {};
+  const total = Object.values(groups).reduce((s, a) => s + a.length, 0);
   let html = "";
-  for (const [theme, groups] of Object.entries(d.themes)) {
-    html += `<h2>${theme}</h2>`;
-    for (const [grp, arr] of Object.entries(groups)) {
-      html += `<div class="grp">${grp} <span class="cnt">· ${arr.length}종목</span></div>
-        <div class="grid">${arr.map(card).join("")}</div>`;
-    }
+  for (const [grp, arr] of Object.entries(groups)) {
+    html += `<div class="grp">${grp} <span class="cnt">· ${arr.length}종목</span></div>
+      <div class="grid">${arr.map(card).join("")}</div>`;
   }
   document.getElementById("board").innerHTML = html;
+  location.hash = encodeURIComponent(curTheme);
+}
+function setTheme(t) { curTheme = t; renderTabs(); renderBoard(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+function render(d) {
+  DATA = d;
+  document.getElementById("updated").textContent = "갱신 " + d.updated;
+  const themes = Object.keys(d.themes);
+  const fromHash = decodeURIComponent(location.hash.slice(1));
+  curTheme = themes.includes(fromHash) ? fromHash : themes[0];
+  renderTabs(); renderBoard();
 }
 fetch("watchlist.json").then(r => r.json()).then(render).catch(() => {
   if (window.__WATCHLIST__) render(window.__WATCHLIST__);

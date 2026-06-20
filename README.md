@@ -33,6 +33,15 @@ python3 -m http.server -d docs # http://localhost:8000 접속
 3. `.github/workflows/update.yml`이 평일 22:30 UTC(한국 오전 7:30, 미국 장 마감 후)에
    자동으로 데이터를 갱신·커밋함
 
+## 종목 워치리스트 (watchlist.html)
+
+ETF가 아닌 **개별 종목**을 테마·국가·규모별로 보는 별도 페이지. 상단 네비게이션으로 섹터 대시보드와 오감.
+
+- 테마: 방산 / 반도체 / 2차전지 (탭 전환, `#테마`로 딥링크)
+- 글로벌 96종목: 한국(.KS)·미국·유럽(.DE/.PA/.L/.MI/.BR)·대만(.TW)·홍콩(.HK)·중국 A주(.SZ/.SS)·일본(.T)
+- 현지 통화 표시(₩/$/€/¥/HK$/CN¥/NT$), 그룹 내 당일 등락순
+- 추적 종목은 `fetch_watchlist.py`의 `WATCHLIST`에서 테마/그룹/종목 편집
+
 ## 구성 변경
 
 추적할 ETF는 `fetch_data.py`의 `TICKERS` 목록에서 추가/삭제하면 됨 (티커, 한글명, 그룹).
