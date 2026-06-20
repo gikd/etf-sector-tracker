@@ -1,0 +1,29 @@
+name: 주간 메가캡 명단 갱신
+
+on:
+  schedule:
+    # 매주 일요일 21:00 UTC (월요일 장 시작 전) — 시총 TOP100 명단 재산정
+    - cron: "0 21 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  universe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 시총 TOP100 명단 산정
+        # crumb 인증 실패 등으로 죽어도 기존 명단 유지(워크플로는 계속)
+        run: python3 fetch_universe.py || echo "명단 갱신 실패 — 기존 명단 유지"
+      - name: 커밋 & 푸시
+        run: |
+          git config user.name "etf-bot"
+          git config user.email "actions@github.com"
+          git add docs/megacap_universe.json
+          git diff --cached --quiet || git commit -m "universe: $(date -u +%Y-%m-%d) TOP100 명단 갱신"
+          git push

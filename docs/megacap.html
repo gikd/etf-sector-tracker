@@ -166,7 +166,7 @@ function card(s, isLead) {
   const high = s.from_high != null && s.from_high >= -3;
   return `<div class="card ${isLead ? "lead" : ""}">
     <div class="top"><span class="nm">${s.name}</span><span class="ret ${cls(s[period])}">${fmt(s[period])}</span></div>
-    <div class="tk">${s.ticker}</div>
+    <div class="tk">${s.ticker}${s.rank ? ` · 시총 ${s.rank}위` : ""}${s.mcap_b ? ` · $${(s.mcap_b / 1000).toFixed(2)}T` : ""}</div>
     <div class="badges">
       ${high ? `<span class="badge b-high">신고가 ${fmt(s.from_high)}</span>` : ""}
       ${s.lowliq ? `<span class="badge b-low">저유동</span>` : ""}
@@ -196,7 +196,8 @@ function renderAll() { renderPeriods(); renderBars(); renderBoard(); }
 
 function boot(d) {
   DATA = d;
-  document.getElementById("updated").textContent = "갱신 " + d.updated + " · " + d.count + "종목";
+  const uni = d.universe_updated ? ` · 명단 ${d.universe_updated.slice(0, 10)} 기준(주 1회)` : "";
+  document.getElementById("updated").textContent = `시세 ${d.updated} · ${d.count}종목${uni}`;
   renderAll();
 }
 fetch("megacap.json").then(r => r.json()).then(boot).catch(() => {
