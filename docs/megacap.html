@@ -206,7 +206,7 @@ function card(s, isLead) {
       <div class="per-item"><div class="per-lbl">올해 PER</div><div class="per-val">${peNow}</div></div>
       <div class="per-item"><div class="per-lbl">내년 PER</div><div class="per-val accent">${peNext}</div></div>
     </div>
-    ${spark(s.spark)}
+    ${spark(s.candles ? s.candles.c.slice(-63) : s.spark)}
     <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span></div>
   </div>`;
 }
