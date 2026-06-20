@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>글로벌 메가캡 섹터 강세</title>
+<style>
+  :root {
+    --bg: #0e1117; --card: #181c25; --card-hover: #1f2430;
+    --text: #e6e9ef; --muted: #8b93a3; --border: #262c3a;
+    --accent: #5b9cff; --up: #4ade80; --down: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+    padding: 18px 20px 60px; max-width: 1180px; margin: 0 auto;
+  }
+  .nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .nav a { text-decoration: none; font-size: 14px; padding: 7px 16px; border-radius: 9px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--card); }
+  .nav a.cur { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  .updated { color: var(--muted); font-size: 13px; }
+  .note { color: var(--muted); font-size: 13px; margin: 6px 0 18px; line-height: 1.6; }
+
+  .periods { display: flex; gap: 6px; margin-bottom: 22px; flex-wrap: wrap; }
+  .periods button { background: var(--card); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
+  .periods button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+  h2 { font-size: 17px; margin: 30px 0 4px; }
+  .h2-sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+
+  /* 섹터 강세 막대 */
+  .bars { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; cursor: pointer; border-radius: 6px; }
+  .bar-row:hover { background: var(--card-hover); }
+  .bar-rank { width: 18px; color: var(--muted); font-size: 12px; text-align: right; }
+  .bar-label { width: 130px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 18px; position: relative; }
+  .bar-track::before { content: ""; position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: var(--border); }
+  .bar-fill { position: absolute; top: 2px; height: 14px; border-radius: 3px; }
+  .bar-val { width: 64px; font-size: 13px; font-weight: 700; text-align: right; flex-shrink: 0; }
+
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .sec-head h3 { font-size: 16px; }
+  .sec-head .med { font-size: 13px; font-weight: 700; }
+  .sec-head .rk { color: var(--muted); font-size: 12px; }
+
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px 9px; position: relative; }
+  .card.lead { border-color: var(--accent); }
+  .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .ret { font-weight: 800; font-size: 15px; flex-shrink: 0; }
+  .card .tk { color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .badges { display: flex; gap: 4px; margin-top: 4px; min-height: 16px; flex-wrap: wrap; }
+  .badge { font-size: 10px; padding: 1px 6px; border-radius: 99px; font-weight: 700; }
+  .b-high { background: rgba(74,222,128,.18); color: var(--up); }
+  .b-low { background: rgba(248,113,113,.16); color: var(--down); }
+  .card svg { display: block; width: 100%; height: 34px; margin: 5px 0 4px; }
+  .card .sub { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .card .px { color: var(--text); font-weight: 600; }
+  .pos { color: var(--up); } .neg { color: var(--down); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="index.html">📊 섹터 대시보드</a>
+  <a href="megacap.html" class="cur">🌍 글로벌 메가캡</a>
+  <a href="watchlist.html">📋 종목 워치리스트</a>
+</div>
+<header>
+  <h1>🌍 글로벌 메가캡 섹터 강세</h1>
+  <span class="updated" id="updated"></span>
+</header>
+<p class="note">
+  전 세계 시총 최상위 ~100개(큰돈도 쉽게 거래 가능한 초대형주)를 직접 섹터 분류.
+  <b>어느 섹터로 돈이 쏠리는지</b>(섹터 강세 순위) → <b>그 안에서 잘 가는 종목</b>(모멘텀순)을 봅니다.
+  기간 버튼으로 1주~YTD 전환. 관측용이며 투자 권유가 아닙니다.
+</p>
+
+<div class="periods" id="periods"></div>
+
+<h2>🔥 섹터 강세 순위</h2>
+<div class="h2-sub">섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동</div>
+<div class="bars" id="bars"></div>
+
+<div id="board"></div>
+
+<footer>
+  데이터: Yahoo Finance 일봉 · 1일 1회 갱신 · 현지 통화 기준. 시총 상위 종목군은 분기 단위 수동 큐레이션.
+  ‘신고가’ = 52주 고점 대비 −3% 이내. ‘저유동’ = 유통물량 적어 대량 거래 어려움(예: 아람코).
+</footer>
+
+<script src="megacap.js"></script>
+<script>
+const PERIODS = [
+  { key: "r1w", label: "1주" }, { key: "r1m", label: "1개월" },
+  { key: "r3m", label: "3개월" }, { key: "ytd", label: "연초이후" },
+];
+const CCY = {
+  USD: { s: "$", d: 2 }, KRW: { s: "₩", d: 0 }, EUR: { s: "€", d: 2 },
+  GBp: { s: "", d: 1, suf: "p" }, JPY: { s: "¥", d: 0 }, HKD: { s: "HK$", d: 2 },
+  CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
+};
+let DATA = null, period = "r1m";
+
+const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+const cls = v => v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "";
+function fmtPx(v, ccy) {
+  const c = CCY[ccy] || { s: "", d: 2 };
+  return c.s + v.toLocaleString(undefined, { minimumFractionDigits: c.d, maximumFractionDigits: c.d }) + (c.suf || "");
+}
+function median(arr) {
+  const a = arr.filter(x => x != null).sort((x, y) => x - y);
+  if (!a.length) return null;
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function spark(values) {
+  const min = Math.min(...values), max = Math.max(...values), range = max - min || 1;
+  const pts = values.map((v, i) =>
+    `${(i / (values.length - 1) * 100).toFixed(1)},${(34 - (v - min) / range * 30 - 2).toFixed(1)}`
+  ).join(" ");
+  const up = values[values.length - 1] >= values[0];
+  return `<svg viewBox="0 0 100 34" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${up ? "var(--up)" : "var(--down)"}" stroke-width="1.6"/></svg>`;
+}
+
+function sectors() {
+  const map = {};
+  for (const s of DATA.stocks) (map[s.sector] ||= []).push(s);
+  return Object.entries(map).map(([name, list]) => ({
+    name, list, med: median(list.map(s => s[period])),
+  })).sort((a, b) => (b.med ?? -999) - (a.med ?? -999));
+}
+
+function renderPeriods() {
+  document.getElementById("periods").innerHTML = PERIODS.map(p =>
+    `<button class="${p.key === period ? "active" : ""}" onclick="setPeriod('${p.key}')">${p.label}</button>`).join("");
+}
+function setPeriod(k) { period = k; renderAll(); }
+
+function renderBars() {
+  const secs = sectors();
+  const maxAbs = Math.max(1, ...secs.map(s => Math.abs(s.med ?? 0)));
+  document.getElementById("bars").innerHTML = secs.map((s, i) => {
+    const v = s.med ?? 0, w = Math.abs(v) / maxAbs * 49;
+    const style = v >= 0
+      ? `left:50%;width:${w}%;background:linear-gradient(90deg,rgba(74,222,128,.5),var(--up))`
+      : `right:50%;width:${w}%;background:linear-gradient(270deg,rgba(248,113,113,.5),var(--down))`;
+    return `<div class="bar-row" onclick="document.getElementById('sec-${i}').scrollIntoView({behavior:'smooth'})">
+      <div class="bar-rank">${i + 1}</div>
+      <div class="bar-label">${s.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="${style}"></div></div>
+      <div class="bar-val ${cls(s.med)}">${fmt(s.med)}</div>
+    </div>`;
+  }).join("");
+}
+
+function card(s, isLead) {
+  const high = s.from_high != null && s.from_high >= -3;
+  return `<div class="card ${isLead ? "lead" : ""}">
+    <div class="top"><span class="nm">${s.name}</span><span class="ret ${cls(s[period])}">${fmt(s[period])}</span></div>
+    <div class="tk">${s.ticker}</div>
+    <div class="badges">
+      ${high ? `<span class="badge b-high">신고가 ${fmt(s.from_high)}</span>` : ""}
+      ${s.lowliq ? `<span class="badge b-low">저유동</span>` : ""}
+    </div>
+    ${spark(s.spark)}
+    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
+      <span>1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span></div>
+    <div class="sub"><span>3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span>
+      <span>YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span></div>
+  </div>`;
+}
+
+function renderBoard() {
+  const secs = sectors();
+  document.getElementById("board").innerHTML = secs.map((s, i) => {
+    const sorted = [...s.list].sort((a, b) => (b[period] ?? -999) - (a[period] ?? -999));
+    return `<div class="sec-head" id="sec-${i}">
+        <h3>${s.name}</h3>
+        <span class="med ${cls(s.med)}">중앙값 ${fmt(s.med)}</span>
+        <span class="rk">강세 ${i + 1}위 · ${s.list.length}종목</span>
+      </div>
+      <div class="grid">${sorted.map((x, j) => card(x, j === 0 && (x[period] ?? -999) > 0)).join("")}</div>`;
+  }).join("");
+}
+
+function renderAll() { renderPeriods(); renderBars(); renderBoard(); }
+
+function boot(d) {
+  DATA = d;
+  document.getElementById("updated").textContent = "갱신 " + d.updated + " · " + d.count + "종목";
+  renderAll();
+}
+fetch("megacap.json").then(r => r.json()).then(boot).catch(() => {
+  if (window.__MEGACAP__) boot(window.__MEGACAP__);
+  else document.getElementById("board").innerHTML =
+    `<p style="color:#f87171">데이터를 불러올 수 없습니다. python3 fetch_megacap.py 를 먼저 실행하세요.</p>`;
+});
+</script>
+</body>
+</html>
