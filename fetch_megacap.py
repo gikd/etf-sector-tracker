@@ -67,6 +67,7 @@ def fetch(sym, retries=3):
             return {
                 "price": round(close[-1], 2),
                 "ccy": meta.get("currency", "USD"),
+                "r1d": pct(close, 1),
                 "r1w": pct(close, 5),
                 "r1m": pct(close, 21),
                 "r3m": pct(close, 63),

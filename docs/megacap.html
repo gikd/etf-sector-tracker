@@ -99,7 +99,7 @@
 <script src="megacap.js"></script>
 <script>
 const PERIODS = [
-  { key: "r1w", label: "1주" }, { key: "r1m", label: "1개월" },
+  { key: "r1d", label: "1일" }, { key: "r1w", label: "1주" }, { key: "r1m", label: "1개월" },
   { key: "r3m", label: "3개월" }, { key: "ytd", label: "연초이후" },
 ];
 const CCY = {
@@ -173,7 +173,9 @@ function card(s, isLead) {
     </div>
     ${spark(s.spark)}
     <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
-      <span>1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span></div>
+      <span>1일 <b class="${cls(s.r1d)}">${fmt(s.r1d)}</b></span></div>
+    <div class="sub"><span>1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
+      <span>1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span></div>
     <div class="sub"><span>3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span>
       <span>YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span></div>
   </div>`;
