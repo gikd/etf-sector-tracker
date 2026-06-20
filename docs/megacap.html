@@ -53,9 +53,11 @@
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px 9px; position: relative; cursor: pointer; transition: transform .08s, border-color .08s; }
   .card:hover { transform: translateY(-2px); border-color: #3a4357; }
   .card.lead { border-color: var(--accent); }
-  .card .per { color: var(--accent); font-weight: 600; }
-  .card .stats3 { gap: 4px; }
-  .card .stats3 span { white-space: nowrap; }
+  .per-row { display: flex; gap: 8px; margin: 9px 0 3px; }
+  .per-item { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 5px 9px; }
+  .per-lbl { font-size: 10.5px; color: var(--muted); }
+  .per-val { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+  .per-val.accent { color: var(--accent); }
   .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
   .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card .ret { font-weight: 800; font-size: 15px; flex-shrink: 0; }
@@ -106,7 +108,8 @@
 <p class="note">
   전 세계 시총 최상위 ~100개(큰돈도 쉽게 거래 가능한 초대형주)를 직접 섹터 분류.
   <b>어느 섹터로 돈이 쏠리는지</b>(섹터 강세 순위) → <b>그 안에서 잘 가는 종목</b>(모멘텀순)을 봅니다.
-  기간 버튼으로 1일~YTD 전환. 카드의 PER은 올해→내년 예상(선행). <b>카드 클릭 = 일봉 차트 + 뉴스.</b> 관측용이며 투자 권유가 아닙니다.
+  기간 버튼은 섹터 강세 순위·종목 정렬 기준(1일~YTD). 카드엔 <b>올해·내년 예상 PER</b>만 — 여러 종목 한눈에 밸류 비교용.
+  <b>카드 클릭 = 일봉 차트 + 수익률 + 뉴스 상세.</b> 관측용이며 투자 권유가 아닙니다.
 </p>
 
 <div class="periods" id="periods"></div>
@@ -193,29 +196,18 @@ function renderBars() {
   }).join("");
 }
 
-function perStr(s) {
-  if (s.pe_now && s.pe_next) return `PER ${s.pe_now}→${s.pe_next}`;
-  if (s.pe_next) return `PER 내년 ${s.pe_next}`;
-  if (s.pe_now) return `PER 올해 ${s.pe_now}`;
-  return "";
-}
 function card(s, isLead) {
-  const high = s.from_high != null && s.from_high >= -3;
-  const per = perStr(s);
+  const peNow = s.pe_now != null ? s.pe_now : "–";
+  const peNext = s.pe_next != null ? s.pe_next : "–";
   return `<div class="card ${isLead ? "lead" : ""}" onclick="openModal('${s.ticker}')">
-    <div class="top"><span class="nm">${s.name}</span><span class="ret ${cls(s[period])}">${fmt(s[period])}</span></div>
+    <div class="top"><span class="nm">${s.name}</span>${s.lowliq ? `<span class="badge b-low">저유동</span>` : ""}</div>
     <div class="tk">${s.ticker}${s.rank ? ` · 시총 ${s.rank}위` : ""}${s.mcap_b ? ` · $${(s.mcap_b / 1000).toFixed(2)}T` : ""}</div>
-    <div class="badges">
-      ${high ? `<span class="badge b-high">신고가 ${fmt(s.from_high)}</span>` : ""}
-      ${s.lowliq ? `<span class="badge b-low">저유동</span>` : ""}
+    <div class="per-row">
+      <div class="per-item"><div class="per-lbl">올해 PER</div><div class="per-val">${peNow}</div></div>
+      <div class="per-item"><div class="per-lbl">내년 PER</div><div class="per-val accent">${peNext}</div></div>
     </div>
     ${spark(s.spark)}
-    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>${per ? `<span class="per">${per}</span>` : ""}</div>
-    <div class="sub stats3">
-      <span>1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
-      <span>1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span>
-      <span>YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span>
-    </div>
+    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span></div>
   </div>`;
 }
 
