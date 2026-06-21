@@ -73,6 +73,19 @@
   .pos { color: var(--up); } .neg { color: var(--down); }
   footer { margin-top: 40px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 
+  /* 왜 쏠리나 해석 */
+  .why-wrap { margin-top: 22px; }
+  .why-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .why-head h2 { margin: 0; }
+  .why-head .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 2px 9px; }
+  .why-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .why-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; border-left: 3px solid var(--accent); }
+  .why-card .wh-top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .why-card .wh-rank { font-size: 13px; font-weight: 800; color: var(--accent); }
+  .why-card .wh-sec { font-size: 15px; font-weight: 700; }
+  .why-card .wh-med { font-size: 12.5px; font-weight: 700; margin-left: auto; }
+  .why-card .wh-txt { font-size: 13px; line-height: 1.7; color: #cdd3df; }
+
   /* 상세 모달 */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 50; display: none;
     align-items: flex-start; justify-content: center; padding: 4vh 16px; overflow-y: auto; }
@@ -118,6 +131,8 @@
 <h2>🔥 섹터 강세 순위</h2>
 <div class="h2-sub">섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동</div>
 <div class="bars" id="bars"></div>
+
+<div id="commentary"></div>
 
 <div id="board"></div>
 
@@ -228,6 +243,27 @@ function renderBoard() {
 
 function renderAll() { renderPeriods(); renderBars(); renderBoard(); }
 
+function renderCommentary(c) {
+  if (!c || !c.sectors || !c.sectors.length) return;
+  const cards = c.sectors.map(s => `
+    <div class="why-card">
+      <div class="wh-top">
+        <span class="wh-rank">${s.rank}위</span>
+        <span class="wh-sec">${s.sector}</span>
+        <span class="wh-med ${s.median_r1w >= 0 ? "pos" : "neg"}">1주 ${s.median_r1w >= 0 ? "+" : ""}${s.median_r1w}%</span>
+      </div>
+      <div class="wh-txt">${s.why}</div>
+    </div>`).join("");
+  document.getElementById("commentary").innerHTML = `
+    <div class="why-wrap">
+      <div class="why-head">
+        <h2>🧠 왜 이쪽으로 돈이 쏠릴까</h2>
+        <span class="tag">AI 해석 · ${c.updated} · ${c.basis || ""} · 투자권유 아님</span>
+      </div>
+      <div class="why-grid">${cards}</div>
+    </div>`;
+}
+
 /* ── 상세 모달: 일봉 캔들 + 선행 PER + 뉴스 ── */
 function candleSVG(s, win) {
   const c = s.candles;
@@ -311,6 +347,7 @@ fetch("megacap.json").then(r => r.json()).then(boot).catch(() => {
   else document.getElementById("board").innerHTML =
     `<p style="color:#f87171">데이터를 불러올 수 없습니다. python3 fetch_megacap.py 를 먼저 실행하세요.</p>`;
 });
+fetch("commentary.json").then(r => r.json()).then(renderCommentary).catch(() => {});
 </script>
 </body>
 </html>
