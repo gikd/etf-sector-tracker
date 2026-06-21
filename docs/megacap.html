@@ -209,7 +209,7 @@ function card(s, isLead) {
     </div>
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
-      <span class="today ${cls(s.r1d)}">오늘 ${fmt(s.r1d)}</span></div>
+      <span class="today ${cls(s.r1d)}">${fmt(s.r1d)}</span></div>
   </div>`;
 }
 
