@@ -43,15 +43,6 @@ python3 -m http.server -d docs # http://localhost:8000 접속
 - **명단(주 1회)**: `fetch_universe.py` — 후보군(~140) 시총을 Yahoo crumb 인증으로 받아 USD 환산·랭킹 → TOP100 → `megacap_universe.json`. 일요일 `universe.yml` 워크플로로 갱신.
   후보군/섹터 분류는 `fetch_universe.py`의 `CANDIDATES`에서 편집.
 
-## 종목 워치리스트 (watchlist.html)
-
-ETF가 아닌 **개별 종목**을 테마·국가·규모별로 보는 별도 페이지. 상단 네비게이션으로 섹터 대시보드와 오감.
-
-- 테마(8): 방산 / 반도체 / 2차전지 / 바이오·헬스 / 자동차·모빌리티 / 인터넷·플랫폼 / 엔터·콘텐츠 / 화장품·소비 (탭 전환, `#테마`로 딥링크)
-- 글로벌 164종목: 한국(.KS)·미국·유럽(.DE/.PA/.L/.MI/.BR)·대만(.TW)·홍콩(.HK)·중국 A주(.SZ/.SS)·일본(.T)
-- 현지 통화 표시(₩/$/€/¥/HK$/CN¥/NT$), 그룹 내 당일 등락순
-- 추적 종목은 `fetch_watchlist.py`의 `WATCHLIST`에서 테마/그룹/종목 편집
-
 ## 구성 변경
 
 추적할 ETF는 `fetch_data.py`의 `TICKERS` 목록에서 추가/삭제하면 됨 (티커, 한글명, 그룹).

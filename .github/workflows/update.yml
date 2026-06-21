@@ -19,14 +19,12 @@ jobs:
           python-version: "3.12"
       - name: 데이터 수집
         run: python3 fetch_data.py
-      - name: 워치리스트(개별 종목) 수집
-        run: python3 fetch_watchlist.py
       - name: 메가캡 수집
         run: python3 fetch_megacap.py
       - name: 커밋 & 푸시
         run: |
           git config user.name "etf-bot"
           git config user.email "actions@github.com"
-          git add docs/data.json docs/data.js docs/watchlist.json docs/watchlist.js docs/megacap.json docs/megacap.js
+          git add docs/data.json docs/data.js docs/megacap.json docs/megacap.js
           git diff --cached --quiet || git commit -m "data: $(date -u +%Y-%m-%d) 갱신"
           git push
