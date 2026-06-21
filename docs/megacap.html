@@ -58,6 +58,7 @@
   .per-lbl { font-size: 10.5px; color: var(--muted); }
   .per-val { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
   .per-val.accent { color: var(--accent); }
+  .card .today { font-weight: 700; }
   .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
   .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card .ret { font-weight: 800; font-size: 15px; flex-shrink: 0; }
@@ -207,7 +208,8 @@ function card(s, isLead) {
       <div class="per-item"><div class="per-lbl">내년 PER</div><div class="per-val accent">${peNext}</div></div>
     </div>
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
-    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span></div>
+    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
+      <span class="today ${cls(s.r1d)}">오늘 ${fmt(s.r1d)}</span></div>
   </div>`;
 }
 
