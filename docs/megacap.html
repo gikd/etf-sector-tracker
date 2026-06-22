@@ -78,25 +78,6 @@
     border-radius: 10px; padding: 11px 15px; margin: 2px 0 12px; font-size: 13px; line-height: 1.75; color: #cdd3df; }
   .sec-why .why-tag { color: var(--muted); font-size: 11px; margin-left: 7px; white-space: nowrap; }
 
-  /* 내 관점 트래킹 */
-  .persp { margin-top: 24px; }
-  .persp-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-  .persp-head h2 { margin: 0; }
-  .persp-head .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 2px 9px; }
-  .persp-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-  .th-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; border-left: 3px solid var(--accent); }
-  .th-top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-  .th-title { font-weight: 700; font-size: 14px; flex: 1; }
-  .th-status { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
-  .th-status.ok { background: rgba(74,222,128,.18); color: var(--up); }
-  .th-status.watch { background: rgba(251,191,36,.16); color: #fbbf24; }
-  .th-status.against { background: rgba(248,113,113,.16); color: var(--down); }
-  .th-sum { font-size: 12.5px; line-height: 1.65; color: #cdd3df; }
-  .th-ev { font-size: 11.5px; color: var(--muted); margin: 6px 0; }
-  .th-tks { display: flex; flex-wrap: wrap; gap: 5px; }
-  .tk-chip { font-size: 11.5px; padding: 3px 9px; border-radius: 7px; background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
-  .tk-chip:hover { border-color: var(--accent); color: var(--accent); }
-
   /* 상세 모달 */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 50; display: none;
     align-items: flex-start; justify-content: center; padding: 4vh 16px; overflow-y: auto; }
@@ -142,8 +123,6 @@
 <div class="h2-sub">섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동</div>
 <div class="bars" id="bars"></div>
 
-<div id="perspective"></div>
-
 <div id="board"></div>
 
 <footer>
@@ -165,8 +144,7 @@ const CCY = {
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
 let DATA = null, period = "r1w";
-let COMMENTARY = {}, COMMENTARY_DATE = "", COMMENTARY_SRC = "";
-let PERSP = null;
+let COMMENTARY = {}, COMMENTARY_DATE = "";
 let modalWin = 63, modalTicker = null;
 const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
 const byTicker = t => DATA.stocks.find(s => s.ticker === t);
@@ -245,8 +223,7 @@ function renderBoard() {
   document.getElementById("board").innerHTML = secs.map((s, i) => {
     const sorted = [...s.list].sort((a, b) => (b[period] ?? -999) - (a[period] ?? -999));
     const cm = COMMENTARY[s.name];
-    const tag = "내 관점" + (COMMENTARY_SRC ? " · 출처 " + COMMENTARY_SRC : "") + " · 투자권유 아님";
-    const why = cm ? `<div class="sec-why">🧠 ${cm.why}<span class="why-tag">${tag}</span></div>` : "";
+    const why = cm ? `<div class="sec-why">🧠 ${cm.why}<span class="why-tag">AI 해석${COMMENTARY_DATE ? " · " + COMMENTARY_DATE : ""} · 투자권유 아님</span></div>` : "";
     return `<div class="sec-head" id="sec-${i}">
         <h3>${s.name}</h3>
         <span class="med ${cls(s.med)}">중앙값 ${fmt(s.med)}</span>
@@ -263,34 +240,9 @@ function setCommentary(c) {
   if (!c || !c.sectors) return;
   COMMENTARY = {};
   COMMENTARY_DATE = c.updated || "";
-  COMMENTARY_SRC = c.source || "";
   c.sectors.forEach(s => { COMMENTARY[s.sector] = s; });
   if (DATA) renderBoard();
 }
-
-function renderPerspective(p) {
-  if (!p || !p.theses || !p.theses.length) return;
-  const st = { "맞는 중": "ok", "지켜보는 중": "watch", "역행": "against" };
-  const cards = p.theses.map(t => {
-    const chips = (t.tickers || []).map(tk => {
-      const s = DATA && byTicker(tk);
-      return s ? `<span class="tk-chip" onclick="openModal('${tk}')">${s.name}</span>` : "";
-    }).filter(Boolean).join("");
-    return `<div class="th-card">
-      <div class="th-top"><span class="th-title">${t.title}</span><span class="th-status ${st[t.status] || "watch"}">${t.status}</span></div>
-      <div class="th-sum">${t.summary}</div>
-      ${t.evidence ? `<div class="th-ev">📈 ${t.evidence}</div>` : ""}
-      <div class="th-tks">${chips}</div>
-    </div>`;
-  }).join("");
-  document.getElementById("perspective").innerHTML = `
-    <div class="persp">
-      <div class="persp-head"><h2>📌 내 관점 트래킹</h2>
-        <span class="tag">출처: ${p.source || ""}${p.updated ? " · " + p.updated : ""} · 투자권유 아님</span></div>
-      <div class="persp-grid">${cards}</div>
-    </div>`;
-}
-function setPerspective(p) { PERSP = p; if (DATA) renderPerspective(p); }
 
 /* ── 상세 모달: 일봉 캔들 + 선행 PER + 뉴스 ── */
 function candleSVG(s, win) {
@@ -369,7 +321,6 @@ function boot(d) {
   const uni = d.universe_updated ? ` · 명단 ${d.universe_updated.slice(0, 10)} 기준(주 1회)` : "";
   document.getElementById("updated").textContent = `시세 ${d.updated} · ${d.count}종목${uni}`;
   renderAll();
-  if (PERSP) renderPerspective(PERSP);
 }
 fetch("megacap.json").then(r => r.json()).then(boot).catch(() => {
   if (window.__MEGACAP__) boot(window.__MEGACAP__);
@@ -377,7 +328,6 @@ fetch("megacap.json").then(r => r.json()).then(boot).catch(() => {
     `<p style="color:#f87171">데이터를 불러올 수 없습니다. python3 fetch_megacap.py 를 먼저 실행하세요.</p>`;
 });
 fetch("commentary.json").then(r => r.json()).then(setCommentary).catch(() => {});
-fetch("perspective.json").then(r => r.json()).then(setPerspective).catch(() => {});
 </script>
 </body>
 </html>
