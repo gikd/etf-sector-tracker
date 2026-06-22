@@ -2,8 +2,9 @@ name: 일일 데이터 갱신
 
 on:
   schedule:
-    # 매일 22:30 UTC = 미국 장 마감(16:00 ET) 이후 / 한국시간 오전 7:30
-    - cron: "30 22 * * 1-5"
+    # 미국 장 마감(16:00 ET) 직후. ET는 DST로 여름 UTC-4 / 겨울 UTC-5 → 두 시각 모두 등록.
+    - cron: "20 20 * * 1-5"   # 여름(EDT): 16:00 ET = 20:00 UTC + 20분
+    - cron: "20 21 * * 1-5"   # 겨울(EST): 16:00 ET = 21:00 UTC + 20분
   workflow_dispatch:
 
 permissions:
