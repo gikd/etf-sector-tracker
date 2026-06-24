@@ -145,7 +145,7 @@ const CCY = {
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
 let DATA = null, period = "r1w";
-let COMMENTARY = {}, COMMENTARY_DATE = "";
+let COMMENTARY_DAILY = {}, COMMENTARY_WEEKLY = {}, COMMENTARY_DATE = "";
 let modalWin = 63, modalTicker = null;
 const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
 const byTicker = t => DATA.stocks.find(s => s.ticker === t);
@@ -223,8 +223,11 @@ function renderBoard() {
   const secs = sectors();
   document.getElementById("board").innerHTML = secs.map((s, i) => {
     const sorted = [...s.list].sort((a, b) => (b[period] ?? -999) - (a[period] ?? -999));
-    const cm = COMMENTARY[s.name];
-    const why = cm ? `<div class="sec-why">🧠 ${cm.why}<span class="why-tag">AI 해석${COMMENTARY_DATE ? " · " + COMMENTARY_DATE : ""} · 투자권유 아님</span></div>` : "";
+    const isDaily = period === "r1d";
+    const cmap = isDaily ? COMMENTARY_DAILY : COMMENTARY_WEEKLY;
+    const cm = cmap[s.name];
+    const tag = (isDaily ? "오늘(1일) 해석" : "주간(1주) 해석") + (COMMENTARY_DATE ? " · " + COMMENTARY_DATE : "") + " · AI 해석 · 투자권유 아님";
+    const why = cm ? `<div class="sec-why">🧠 ${cm.why}<span class="why-tag">${tag}</span></div>` : "";
     return `<div class="sec-head" id="sec-${i}">
         <h3>${s.name}</h3>
         <span class="med ${cls(s.med)}">중앙값 ${fmt(s.med)}</span>
@@ -238,10 +241,13 @@ function renderBoard() {
 function renderAll() { renderPeriods(); renderBars(); renderBoard(); }
 
 function setCommentary(c) {
-  if (!c || !c.sectors) return;
-  COMMENTARY = {};
+  if (!c) return;
   COMMENTARY_DATE = c.updated || "";
-  c.sectors.forEach(s => { COMMENTARY[s.sector] = s; });
+  COMMENTARY_DAILY = {};
+  COMMENTARY_WEEKLY = {};
+  // 신구조: {daily:{sectors},weekly:{sectors}} / 구버전 호환: {sectors}(=weekly)
+  ((c.daily && c.daily.sectors) || []).forEach(s => { COMMENTARY_DAILY[s.sector] = s; });
+  ((c.weekly && c.weekly.sectors) || c.sectors || []).forEach(s => { COMMENTARY_WEEKLY[s.sector] = s; });
   if (DATA) renderBoard();
 }
 
