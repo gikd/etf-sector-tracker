@@ -17,7 +17,7 @@ from pathlib import Path
 HIST_DAYS = 130
 NEWS_PER = 5
 API = "https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=1y&interval=1d"
-NEWS_RSS = "https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
+NEWS_RSS = "https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
 DOCS = Path(__file__).parent / "docs"
 UNIVERSE = DOCS / "megacap_universe.json"
 OUT = DOCS / "megacap.json"
@@ -95,9 +95,17 @@ def fetch(sym, retries=3):
             time.sleep(1.5 * (attempt + 1))
 
 
-def fetch_news(name):
-    """한국어 뉴스(최근 7일) — 종목명(괄호 앞부분)으로 검색. 번역 불필요."""
-    q = name.split("(")[0].strip()
+def news_query(member):
+    """글로벌 뉴스 검색어 — 영문명 우선(콤마 앞), 없으면 티커(거래소 접미사 제거)."""
+    en = member.get("enname")
+    if en:
+        return en.split(",")[0].strip()
+    return member["ticker"].split(".")[0]
+
+
+def fetch_news(query):
+    """영문 글로벌 뉴스(최근 7일) — 글로벌 회사이므로 외국 뉴스 우선."""
+    q = query.strip()
     try:
         url = NEWS_RSS.format(q=urllib.parse.quote(f"{q} when:7d"))
         root = ET.fromstring(http_get(url))
@@ -130,7 +138,7 @@ def main():
     print(f"메가캡 {len(members)}개 시세·뉴스 수집 중... (명단 기준 {universe_updated or '폴백'})")
     with ThreadPoolExecutor(max_workers=6) as ex:
         quotes = list(ex.map(lambda m: fetch(m["ticker"]), members))
-        news = list(ex.map(lambda m: fetch_news(m["name"]), members))
+        news = list(ex.map(lambda m: fetch_news(news_query(m)), members))
 
     stocks, failed = [], []
     for m, d, nw in zip(members, quotes, news):

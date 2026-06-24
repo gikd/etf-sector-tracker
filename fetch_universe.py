@@ -128,6 +128,7 @@ def main():
                 "mc": r.get("marketCap"), "ccy": r.get("currency", "USD"),
                 "eps_now": r.get("epsCurrentYear"),   # 올해 EPS 추정 → 매일 주가로 PER 계산
                 "eps_next": r.get("epsForward"),      # 내년(선행) EPS 추정
+                "enname": r.get("longName") or r.get("shortName"),  # 영문명 → 글로벌 뉴스 검색용
             }
 
     fx = fx_rates(op, {q["ccy"] for q in quotes.values()})
@@ -142,6 +143,7 @@ def main():
                 "name": name, "ticker": sym, "sector": sector,
                 "mcap_b": round(usd / 1e9, 1),
                 "eps_now": q.get("eps_now"), "eps_next": q.get("eps_next"),
+                "enname": q.get("enname"),
             })
     ranked.sort(key=lambda x: x["mcap_b"], reverse=True)
     members = ranked[:TOP_N]
