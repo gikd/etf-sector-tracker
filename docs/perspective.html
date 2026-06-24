@@ -25,6 +25,12 @@
   .updated { color: var(--muted); font-size: 13px; }
   .note { color: var(--muted); font-size: 13px; margin: 6px 0 22px; line-height: 1.6; }
 
+  /* 주차 선택 */
+  .weeks { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 22px; }
+  .weeks button { background: var(--card); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
+  .weeks button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
   /* 테제 섹션 */
   .thesis { margin-bottom: 34px; }
   .th-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -89,9 +95,10 @@
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
-  주간복기 핵심 테제가 시장에서 어떻게 확인되는지(상태)와, 각 테제에 가장 맞는 종목을 봅니다.
-  카드 클릭 = 일봉 차트 + 뉴스 상세. <b id="src"></b> · 유료 본문 미노출 · 관측용이며 투자 권유가 아닙니다.
+  주간복기 주차별 핵심 테제가 시장에서 어떻게 확인되는지(상태)와, 각 테제에 맞는 종목을 봅니다.
+  카드 클릭 = 일봉 차트 + 뉴스 상세. 유료 본문 미노출 · 관측용이며 투자 권유가 아닙니다.
 </p>
+<div class="weeks" id="weeks"></div>
 <div id="board"></div>
 <footer>
   종목 데이터: 글로벌 메가캡(시총 TOP100)에서 매칭. 테제는 주간복기 관점의 짧은 요약이며 원문이 아닙니다.
@@ -100,7 +107,7 @@
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
 
 <script src="megacap.js"></script>
-<script src="perspective.js"></script>
+<script src="theses.js"></script>
 <script>
 const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
 const CCY = {
@@ -108,7 +115,7 @@ const CCY = {
   GBp: { s: "", d: 1, suf: "p" }, JPY: { s: "¥", d: 0 }, HKD: { s: "HK$", d: 2 },
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
-let STOCKS = {}, PERSP = null, modalWin = 63, modalTicker = null;
+let STOCKS = {}, THESES = null, curWeek = 0, modalWin = 63, modalTicker = null;
 const byTicker = t => STOCKS[t];
 
 const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
@@ -142,19 +149,26 @@ function card(s) {
   </div>`;
 }
 
-function render() {
-  if (!PERSP || !PERSP.theses) return;
-  document.getElementById("src").textContent = "출처: " + (PERSP.source || "주간복기");
-  document.getElementById("updated").textContent = PERSP.updated ? "갱신 " + PERSP.updated : "";
+function renderWeeks() {
+  const ws = THESES.weeks || [];
+  document.getElementById("weeks").innerHTML = ws.map((w, i) =>
+    `<button class="${i === curWeek ? "active" : ""}" onclick="setWeek(${i})">${w.week}</button>`).join("");
+}
+function setWeek(i) { curWeek = i; renderWeeks(); renderBoard(); }
+function renderBoard() {
+  const w = (THESES.weeks || [])[curWeek];
+  if (!w) return;
+  document.getElementById("updated").textContent =
+    `${w.week} 기준 (출처: 주간복기 ${w.week})${THESES.updated ? " · 상태 갱신 " + THESES.updated : ""}`;
   const st = { "맞는 중": "ok", "지켜보는 중": "watch", "역행": "against" };
-  document.getElementById("board").innerHTML = PERSP.theses.map((t, i) => {
+  document.getElementById("board").innerHTML = (w.theses || []).map((t, i) => {
     const cards = (t.tickers || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("");
     return `<section class="thesis">
       <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2>
         <span class="th-status ${st[t.status] || "watch"}">${t.status}</span></div>
       <div class="th-summary">${t.summary}</div>
       ${t.evidence ? `<div class="th-ev">📈 ${t.evidence}</div>` : ""}
-      <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단에 없습니다.</div>`}</div>
+      <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단(글로벌 TOP100)에 없습니다.</div>`}</div>
     </section>`;
   }).join("");
 }
@@ -216,18 +230,19 @@ document.getElementById("modal-bg").addEventListener("click", e => { if (e.targe
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
 function indexStocks(d) { STOCKS = {}; (d.stocks || []).forEach(s => { STOCKS[s.ticker] = s; }); }
+function boot(mega, theses) {
+  if (mega) indexStocks(mega);
+  THESES = theses;
+  if (!THESES || !THESES.weeks) return;
+  curWeek = 0;
+  renderWeeks();
+  renderBoard();
+}
 Promise.all([
   fetch("megacap.json").then(r => r.json()).catch(() => window.__MEGACAP__),
-  fetch("perspective.json").then(r => r.json()).catch(() => window.__PERSPECTIVE__),
-]).then(([mega, persp]) => {
-  if (mega) indexStocks(mega);
-  PERSP = persp;
-  render();
-}).catch(() => {
-  if (window.__MEGACAP__) indexStocks(window.__MEGACAP__);
-  PERSP = window.__PERSPECTIVE__;
-  render();
-});
+  fetch("theses.json").then(r => r.json()).catch(() => window.__THESES__),
+]).then(([mega, theses]) => boot(mega || window.__MEGACAP__, theses || window.__THESES__))
+  .catch(() => boot(window.__MEGACAP__, window.__THESES__));
 </script>
 </body>
 </html>
