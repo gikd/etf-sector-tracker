@@ -18,6 +18,7 @@ HIST_DAYS = 130
 NEWS_PER = 5
 API = "https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=1y&interval=1d"
 NEWS_RSS = "https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
+TRANSLATE = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q={q}"
 DOCS = Path(__file__).parent / "docs"
 UNIVERSE = DOCS / "megacap_universe.json"
 OUT = DOCS / "megacap.json"
@@ -129,6 +130,25 @@ def fetch_news(query):
         return []
 
 
+def translate_news(items):
+    """영문 헤드라인을 한국어로 번역(원문은 ot 보존, 실패 시 영문 유지)."""
+    if not items:
+        return items
+    try:
+        joined = "\n".join(it["t"] for it in items)
+        raw = json.loads(http_get(TRANSLATE.format(q=urllib.parse.quote(joined))))
+        full = "".join(seg[0] for seg in raw[0] if seg[0])
+        lines = [ln.strip() for ln in full.split("\n")]
+        if len(lines) != len(items):
+            raise ValueError("번역 라인 수 불일치")
+        for it, ko in zip(items, lines):
+            it["ot"] = it["t"]
+            it["t"] = ko
+    except Exception:
+        pass  # 실패 시 영문 원문 그대로
+    return items
+
+
 def fwd_pe(price, eps):
     return round(price / eps, 1) if price and eps and eps > 0 else None
 
@@ -139,6 +159,8 @@ def main():
     with ThreadPoolExecutor(max_workers=6) as ex:
         quotes = list(ex.map(lambda m: fetch(m["ticker"]), members))
         news = list(ex.map(lambda m: fetch_news(news_query(m)), members))
+        print("뉴스 한국어 번역 중...")
+        news = list(ex.map(translate_news, news))
 
     stocks, failed = [], []
     for m, d, nw in zip(members, quotes, news):

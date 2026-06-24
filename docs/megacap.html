@@ -99,6 +99,7 @@
   .news a:hover { color: var(--accent); }
   .news li { list-style: none; padding: 7px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
   .news .src { color: var(--muted); font-size: 11.5px; margin-left: 8px; }
+  .news .orig { color: var(--muted); font-size: 11.5px; margin-top: 2px; opacity: .72; }
 </style>
 </head>
 <body>
@@ -316,7 +317,7 @@ function renderModal() {
     <div class="news">
       <h4>📰 관련 뉴스 (최근 7일)</h4>
       <ul>${s.news && s.news.length ? s.news.map(nw =>
-        `<li><a href="${nw.u}" target="_blank" rel="noopener">${nw.t}</a><span class="src">${nw.s} · ${nw.d}</span></li>`).join("")
+        `<li><a href="${nw.u}" target="_blank" rel="noopener" title="${(nw.ot || "").replace(/"/g, "&quot;")}">${nw.t}</a>${nw.ot ? `<div class="orig">${nw.ot}</div>` : ""}<span class="src">${nw.s} · ${nw.d}</span></li>`).join("")
         : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>
     </div>`;
 }
