@@ -235,8 +235,8 @@ function boot(mega, theses) {
   renderBoard();
 }
 Promise.all([
-  fetch("megacap.json").then(r => r.json()).catch(() => window.__MEGACAP__),
-  fetch("theses.json").then(r => r.json()).catch(() => window.__THESES__),
+  fetch("megacap.json?t=" + Date.now()).then(r => r.json()).catch(() => window.__MEGACAP__),
+  fetch("theses.json?t=" + Date.now()).then(r => r.json()).catch(() => window.__THESES__),
 ]).then(([mega, theses]) => boot(mega || window.__MEGACAP__, theses || window.__THESES__))
   .catch(() => boot(window.__MEGACAP__, window.__THESES__));
 </script>
