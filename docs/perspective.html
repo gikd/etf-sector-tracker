@@ -95,7 +95,7 @@
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
-  주간복기 주차별 핵심 테제가 시장에서 어떻게 확인되는지(상태)와, 각 테제에 맞는 종목을 봅니다.
+  주간복기 주차별 핵심 테제와, 각 테제에 맞는 종목을 봅니다.
   카드 클릭 = 일봉 차트 + 뉴스 상세. 유료 본문 미노출 · 관측용이며 투자 권유가 아닙니다.
 </p>
 <div class="weeks" id="weeks"></div>
@@ -158,16 +158,12 @@ function setWeek(i) { curWeek = i; renderWeeks(); renderBoard(); }
 function renderBoard() {
   const w = (THESES.weeks || [])[curWeek];
   if (!w) return;
-  document.getElementById("updated").textContent =
-    `${w.week} 기준 (출처: 주간복기 ${w.week})${THESES.updated ? " · 상태 갱신 " + THESES.updated : ""}`;
-  const st = { "맞는 중": "ok", "지켜보는 중": "watch", "역행": "against" };
+  document.getElementById("updated").textContent = `${w.week} 기준 · 출처: 주간복기 ${w.week}`;
   document.getElementById("board").innerHTML = (w.theses || []).map((t, i) => {
     const cards = (t.tickers || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("");
     return `<section class="thesis">
-      <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2>
-        <span class="th-status ${st[t.status] || "watch"}">${t.status}</span></div>
+      <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2></div>
       <div class="th-summary">${t.summary}</div>
-      ${t.evidence ? `<div class="th-ev">📈 ${t.evidence}</div>` : ""}
       <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단(글로벌 TOP100)에 없습니다.</div>`}</div>
     </section>`;
   }).join("");
