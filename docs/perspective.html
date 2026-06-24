@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 관점 · 테제 트래킹</title>
+<style>
+  :root {
+    --bg: #0e1117; --card: #181c25; --card-hover: #1f2430;
+    --text: #e6e9ef; --muted: #8b93a3; --border: #262c3a;
+    --accent: #5b9cff; --up: #4ade80; --down: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+    padding: 18px 20px 60px; max-width: 1180px; margin: 0 auto;
+  }
+  .nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .nav a { text-decoration: none; font-size: 14px; padding: 7px 16px; border-radius: 9px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--card); }
+  .nav a.cur { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  .updated { color: var(--muted); font-size: 13px; }
+  .note { color: var(--muted); font-size: 13px; margin: 6px 0 22px; line-height: 1.6; }
+
+  /* 테제 섹션 */
+  .thesis { margin-bottom: 34px; }
+  .th-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .th-head h2 { font-size: 18px; }
+  .th-status { font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; }
+  .th-status.ok { background: rgba(74,222,128,.18); color: var(--up); }
+  .th-status.watch { background: rgba(251,191,36,.16); color: #fbbf24; }
+  .th-status.against { background: rgba(248,113,113,.16); color: var(--down); }
+  .th-num { color: var(--muted); font-size: 13px; font-weight: 700; }
+  .th-summary { font-size: 13.5px; line-height: 1.7; color: #cdd3df; margin: 2px 0 4px; max-width: 820px; }
+  .th-ev { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px 9px; cursor: pointer; transition: transform .08s, border-color .08s; }
+  .card:hover { transform: translateY(-2px); border-color: #3a4357; }
+  .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .tk { color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .per-row { display: flex; gap: 8px; margin: 9px 0 3px; }
+  .per-item { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 5px 9px; }
+  .per-lbl { font-size: 10.5px; color: var(--muted); }
+  .per-val { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+  .per-val.accent { color: var(--accent); }
+  .card svg { display: block; width: 100%; height: 34px; margin: 5px 0 4px; }
+  .card .sub { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .card .px { color: var(--text); font-weight: 600; }
+  .card .today { font-weight: 700; }
+  .pos { color: var(--up); } .neg { color: var(--down); }
+  footer { margin-top: 30px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+  /* 상세 모달 (메가캡과 동일) */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 50; display: none;
+    align-items: flex-start; justify-content: center; padding: 4vh 16px; overflow-y: auto; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #141823; border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 880px; padding: 20px 22px 18px; }
+  .modal-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .modal-head h3 { font-size: 19px; }
+  .modal-head .px { font-size: 17px; font-weight: 700; }
+  .modal-head .close { margin-left: auto; cursor: pointer; color: var(--muted); font-size: 22px; background: none; border: none; }
+  .modal-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 12px; }
+  .chip { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--card); border: 1px solid var(--border); }
+  .chip.per { border-color: var(--accent); }
+  .modal .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .modal .tabs button { background: var(--card); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 5px 13px; font-size: 13px; cursor: pointer; }
+  .modal .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .news h4 { font-size: 14px; margin: 18px 0 8px; }
+  .news ul { padding: 0; }
+  .news a { color: var(--text); text-decoration: none; font-size: 13.5px; }
+  .news a:hover { color: var(--accent); }
+  .news li { list-style: none; padding: 7px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+  .news .src { color: var(--muted); font-size: 11.5px; margin-left: 8px; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="index.html">📊 섹터 대시보드</a>
+  <a href="megacap.html">🌍 글로벌 메가캡</a>
+  <a href="perspective.html" class="cur">📌 내 관점</a>
+</div>
+<header>
+  <h1>📌 내 관점 · 테제 트래킹</h1>
+  <span class="updated" id="updated"></span>
+</header>
+<p class="note">
+  주간복기 핵심 테제가 시장에서 어떻게 확인되는지(상태)와, 각 테제에 가장 맞는 종목을 봅니다.
+  카드 클릭 = 일봉 차트 + 뉴스 상세. <b id="src"></b> · 유료 본문 미노출 · 관측용이며 투자 권유가 아닙니다.
+</p>
+<div id="board"></div>
+<footer>
+  종목 데이터: 글로벌 메가캡(시총 TOP100)에서 매칭. 테제는 주간복기 관점의 짧은 요약이며 원문이 아닙니다.
+</footer>
+
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+
+<script src="megacap.js"></script>
+<script src="perspective.js"></script>
+<script>
+const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
+const CCY = {
+  USD: { s: "$", d: 2 }, KRW: { s: "₩", d: 0 }, EUR: { s: "€", d: 2 },
+  GBp: { s: "", d: 1, suf: "p" }, JPY: { s: "¥", d: 0 }, HKD: { s: "HK$", d: 2 },
+  CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
+};
+let STOCKS = {}, PERSP = null, modalWin = 63, modalTicker = null;
+const byTicker = t => STOCKS[t];
+
+const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+const cls = v => v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "";
+function fmtPx(v, ccy) {
+  const c = CCY[ccy] || { s: "", d: 2 };
+  return c.s + v.toLocaleString(undefined, { minimumFractionDigits: c.d, maximumFractionDigits: c.d }) + (c.suf || "");
+}
+function spark(values) {
+  const min = Math.min(...values), max = Math.max(...values), range = max - min || 1;
+  const pts = values.map((v, i) =>
+    `${(i / (values.length - 1) * 100).toFixed(1)},${(34 - (v - min) / range * 30 - 2).toFixed(1)}`).join(" ");
+  const up = values[values.length - 1] >= values[0];
+  return `<svg viewBox="0 0 100 34" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${up ? "var(--up)" : "var(--down)"}" stroke-width="1.6"/></svg>`;
+}
+
+function card(s) {
+  const peNow = s.pe_now != null ? s.pe_now : "–";
+  const peNext = s.pe_next != null ? s.pe_next : "–";
+  const sp = s.candles ? s.candles.c.slice(-42) : s.spark;
+  return `<div class="card" onclick="openModal('${s.ticker}')">
+    <div class="top"><span class="nm">${s.name}</span></div>
+    <div class="tk">${s.ticker}${s.rank ? ` · 시총 ${s.rank}위` : ""}</div>
+    <div class="per-row">
+      <div class="per-item"><div class="per-lbl">올해 PER</div><div class="per-val">${peNow}</div></div>
+      <div class="per-item"><div class="per-lbl">내년 PER</div><div class="per-val accent">${peNext}</div></div>
+    </div>
+    ${spark(sp)}
+    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
+      <span class="today ${cls(s.r1d)}">${fmt(s.r1d)}</span></div>
+  </div>`;
+}
+
+function render() {
+  if (!PERSP || !PERSP.theses) return;
+  document.getElementById("src").textContent = "출처: " + (PERSP.source || "주간복기");
+  document.getElementById("updated").textContent = PERSP.updated ? "갱신 " + PERSP.updated : "";
+  const st = { "맞는 중": "ok", "지켜보는 중": "watch", "역행": "against" };
+  document.getElementById("board").innerHTML = PERSP.theses.map((t, i) => {
+    const cards = (t.tickers || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("");
+    return `<section class="thesis">
+      <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2>
+        <span class="th-status ${st[t.status] || "watch"}">${t.status}</span></div>
+      <div class="th-summary">${t.summary}</div>
+      ${t.evidence ? `<div class="th-ev">📈 ${t.evidence}</div>` : ""}
+      <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단에 없습니다.</div>`}</div>
+    </section>`;
+  }).join("");
+}
+
+/* 상세 모달 (메가캡 데이터 재사용) */
+function candleSVG(s, win) {
+  const c = s.candles; if (!c) return "";
+  const n = Math.min(win, c.c.length);
+  const o = c.o.slice(-n), h = c.h.slice(-n), l = c.l.slice(-n), cl = c.c.slice(-n), v = c.v.slice(-n);
+  const dates = s.dates.slice(-n);
+  const W = 880, PH = 280, VH = 60, B = 24, T = 10, L = 6, R = 58;
+  const H = T + PH + 8 + VH + B, pw = W - L - R;
+  let pmin = Math.min(...l), pmax = Math.max(...h);
+  const pad = (pmax - pmin) * 0.05 || 1; pmin -= pad; pmax += pad;
+  const vmax = Math.max(...v, 1);
+  const X = i => L + (i + 0.5) / n * pw, Y = p => T + (pmax - p) / (pmax - pmin) * PH;
+  const cw = Math.max(1.5, pw / n * 0.62);
+  const span = pmax - pmin;
+  const step = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 5000, 50000].find(x => span / x <= 7) || 100000;
+  let grid = "";
+  for (let g = Math.ceil(pmin / step) * step; g <= pmax; g += step)
+    grid += `<line x1="${L}" x2="${L + pw}" y1="${Y(g)}" y2="${Y(g)}" stroke="#222838"/><text x="${W - R + 6}" y="${Y(g) + 4}" fill="#8b93a3" font-size="11">${g >= 1000 ? (g / 1000).toFixed(0) + "k" : g.toFixed(step < 1 ? 1 : 0)}</text>`;
+  let xl = "";
+  for (let k = 0; k <= 4; k++) { const i = Math.round(k / 4 * (n - 1));
+    xl += `<text x="${X(i)}" y="${H - 6}" fill="#8b93a3" font-size="11" text-anchor="${k === 0 ? "start" : k === 4 ? "end" : "middle"}">${dates[i]?.slice(5)}</text>`; }
+  let body = "";
+  for (let i = 0; i < n; i++) {
+    const up = cl[i] >= o[i], col = up ? "var(--up)" : "var(--down)", x = X(i), yo = Y(o[i]), yc = Y(cl[i]);
+    body += `<line x1="${x}" x2="${x}" y1="${Y(h[i])}" y2="${Y(l[i])}" stroke="${col}" stroke-width="1"/><rect x="${x - cw / 2}" y="${Math.min(yo, yc)}" width="${cw}" height="${Math.max(1, Math.abs(yo - yc))}" fill="${col}"/><rect x="${x - cw / 2}" y="${T + PH + 8 + (1 - v[i] / vmax) * VH}" width="${cw}" height="${v[i] / vmax * VH}" fill="${col}" opacity="0.45"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${grid}${xl}<text x="${L}" y="${T + PH + 22}" fill="#8b93a3" font-size="10.5">거래량</text>${body}</svg>`;
+}
+function openModal(t) { modalTicker = t; modalWin = 63; renderModal(); document.getElementById("modal-bg").classList.add("open"); document.body.style.overflow = "hidden"; }
+function closeModal() { document.getElementById("modal-bg").classList.remove("open"); document.body.style.overflow = ""; }
+function setModalWin(d) { modalWin = d; renderModal(); }
+function renderModal() {
+  const s = byTicker(modalTicker); if (!s) return;
+  const per = (s.pe_now || s.pe_next)
+    ? `<span class="chip per">선행PER ${s.pe_now ? "올해 " + s.pe_now : ""}${s.pe_now && s.pe_next ? " → " : ""}${s.pe_next ? "내년 " + s.pe_next : ""}</span>` : "";
+  document.getElementById("modal").innerHTML = `
+    <div class="modal-head"><h3>${s.name} <span style="color:var(--muted);font-size:14px">${s.ticker} · ${s.sector}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
+      <span class="px">${fmtPx(s.price, s.ccy)}</span><span class="${cls(s.r1d)}" style="font-weight:700">${fmt(s.r1d)}</span>
+      <button class="close" onclick="closeModal()">✕</button></div>
+    <div class="modal-chips">
+      <span class="chip">1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
+      <span class="chip">1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span>
+      <span class="chip">3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span>
+      <span class="chip">YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span>
+      <span class="chip">52주고점대비 <b class="${cls(s.from_high)}">${fmt(s.from_high)}</b></span>
+      ${s.mcap_b ? `<span class="chip">시총 <b>$${(s.mcap_b / 1000).toFixed(2)}T</b></span>` : ""}${per}
+    </div>
+    <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
+    ${candleSVG(s, modalWin + 1)}
+    <div class="news"><h4>📰 관련 뉴스 (최근 7일)</h4>
+      <ul>${s.news && s.news.length ? s.news.map(nw => `<li><a href="${nw.u}" target="_blank" rel="noopener">${nw.t}</a><span class="src">${nw.s} · ${nw.d}</span></li>`).join("") : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>
+    </div>`;
+}
+document.getElementById("modal-bg").addEventListener("click", e => { if (e.target.id === "modal-bg") closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function indexStocks(d) { STOCKS = {}; (d.stocks || []).forEach(s => { STOCKS[s.ticker] = s; }); }
+Promise.all([
+  fetch("megacap.json").then(r => r.json()).catch(() => window.__MEGACAP__),
+  fetch("perspective.json").then(r => r.json()).catch(() => window.__PERSPECTIVE__),
+]).then(([mega, persp]) => {
+  if (mega) indexStocks(mega);
+  PERSP = persp;
+  render();
+}).catch(() => {
+  if (window.__MEGACAP__) indexStocks(window.__MEGACAP__);
+  PERSP = window.__PERSPECTIVE__;
+  render();
+});
+</script>
+</body>
+</html>
