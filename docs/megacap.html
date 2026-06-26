@@ -4,31 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글로벌 메가캡 섹터 강세</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #110f0c; --card: #1a1713; --card-hover: #221e18;
-    --text: #ece6d8; --muted: #9a9082; --border: #34302a;
-    --accent: #e8472b; --up: #4ade80; --down: #f3786a;
-    --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
-    --serif: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+    --bg: #0e1117; --card: #181c25; --card-hover: #1f2430;
+    --text: #e6e9ef; --muted: #8b93a3; --border: #262c3a;
+    --accent: #5b9cff; --up: #4ade80; --down: #f87171;
   }
   * { box-sizing: border-box; margin: 0; }
   body {
     background: var(--bg); color: var(--text);
-    font-family: var(--sans);
-    padding: 0 20px 60px; max-width: 1180px; margin: 0 auto;
+    font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+    padding: 18px 20px 60px; max-width: 1180px; margin: 0 auto;
   }
-  .nav { display: flex; gap: 0; margin: 0 -20px 18px; padding: 0 20px;
-    border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-  .nav a { text-decoration: none; font-size: 13px; font-weight: 700; padding: 13px 16px;
-    color: var(--muted); letter-spacing: .02em; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-  .nav a.cur { color: var(--accent); border-bottom-color: var(--accent); }
-  .nav a:hover { color: var(--text); }
-  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; padding-top: 6px; }
-  h1 { font-size: 30px; font-weight: 900; letter-spacing: -.035em; line-height: 1.02; }
+  .nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .nav a { text-decoration: none; font-size: 14px; padding: 7px 16px; border-radius: 9px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--card); }
+  .nav a.cur { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+  h1 { font-size: 22px; font-weight: 700; }
   .updated { color: var(--muted); font-size: 13px; }
   .note { color: var(--muted); font-size: 13px; margin: 6px 0 18px; line-height: 1.6; }
 
@@ -37,7 +30,7 @@
     border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
   .periods button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
 
-  h2 { font-size: 21px; font-weight: 900; letter-spacing: -.025em; margin: 32px 0 4px; }
+  h2 { font-size: 17px; margin: 30px 0 4px; }
   .h2-sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
 
   /* 섹터 강세 막대 */
@@ -81,10 +74,9 @@
   footer { margin-top: 40px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 
   /* 섹터별 '왜 쏠리나' 해석 (섹터 헤더 아래) */
-  .sec-why { background: transparent; border: 0; border-left: 3px solid var(--accent);
-    border-radius: 0; padding: 4px 0 8px 16px; margin: 2px 0 14px;
-    font-family: var(--serif); font-size: 15px; line-height: 1.95; color: var(--text); }
-  .sec-why .why-tag { display: block; font-family: var(--sans); color: var(--muted); font-size: 11px; margin-top: 8px; letter-spacing: .02em; }
+  .sec-why { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 10px; padding: 11px 15px; margin: 2px 0 12px; font-size: 13px; line-height: 1.75; color: #cdd3df; }
+  .sec-why .why-tag { color: var(--muted); font-size: 11px; margin-left: 7px; white-space: nowrap; }
 
   /* 상세 모달 */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 50; display: none;
