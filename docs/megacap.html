@@ -106,12 +106,12 @@
 </head>
 <body>
 <div class="nav">
-  <a href="index.html">📊 섹터 대시보드</a>
-  <a href="megacap.html" class="cur">🌍 글로벌 메가캡</a>
-  <a href="perspective.html">📌 핵심 태제 트래킹</a>
+  <a href="index.html">섹터 대시보드</a>
+  <a href="megacap.html" class="cur">글로벌 메가캡</a>
+  <a href="perspective.html">핵심 태제 트래킹</a>
 </div>
 <header>
-  <h1>🌍 글로벌 메가캡 섹터 강세</h1>
+  <h1>글로벌 메가캡 섹터 강세</h1>
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
@@ -123,7 +123,7 @@
 
 <div class="periods" id="periods"></div>
 
-<h2>🔥 섹터 강세 순위</h2>
+<h2>섹터 강세 순위</h2>
 <div class="h2-sub">섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동</div>
 <div class="bars" id="bars"></div>
 
@@ -226,7 +226,7 @@ function renderBoard() {
     const cmap = isDaily ? COMMENTARY_DAILY : COMMENTARY_WEEKLY;
     const cm = cmap[s.name];
     const tag = (isDaily ? "오늘(1일) 해석" : "주간(1주) 해석") + (COMMENTARY_DATE ? " · " + COMMENTARY_DATE : "") + " · AI 해석 · 투자권유 아님";
-    const why = cm ? `<div class="sec-why">🧠 ${cm.why}<span class="why-tag">${tag}</span></div>` : "";
+    const why = cm ? `<div class="sec-why">${cm.why}<span class="why-tag">${tag}</span></div>` : "";
     return `<div class="sec-head" id="sec-${i}">
         <h3>${s.name}</h3>
         <span class="med ${cls(s.med)}">중앙값 ${fmt(s.med)}</span>
@@ -313,7 +313,7 @@ function renderModal() {
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
     <div class="news">
-      <h4>📰 관련 뉴스 (최근 7일)</h4>
+      <h4>관련 뉴스 (최근 7일)</h4>
       <ul>${s.news && s.news.length ? s.news.map(nw =>
         `<li><a href="${nw.u}" target="_blank" rel="noopener" title="${(nw.ot || "").replace(/"/g, "&quot;")}">${nw.t}</a>${nw.ot ? `<div class="orig">${nw.ot}</div>` : ""}<span class="src">${nw.s} · ${nw.d}</span></li>`).join("")
         : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>

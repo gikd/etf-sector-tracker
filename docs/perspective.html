@@ -93,12 +93,12 @@
 </head>
 <body>
 <div class="nav">
-  <a href="index.html">📊 섹터 대시보드</a>
-  <a href="megacap.html">🌍 글로벌 메가캡</a>
-  <a href="perspective.html" class="cur">📌 핵심 태제 트래킹</a>
+  <a href="index.html">섹터 대시보드</a>
+  <a href="megacap.html">글로벌 메가캡</a>
+  <a href="perspective.html" class="cur">핵심 태제 트래킹</a>
 </div>
 <header>
-  <h1>📌 핵심 태제 트래킹</h1>
+  <h1>핵심 태제 트래킹</h1>
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
@@ -221,7 +221,7 @@ function renderModal() {
     </div>
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
-    <div class="news"><h4>📰 관련 뉴스 (최근 7일)</h4>
+    <div class="news"><h4>관련 뉴스 (최근 7일)</h4>
       <ul>${s.news && s.news.length ? s.news.map(nw => `<li><a href="${nw.u}" target="_blank" rel="noopener" title="${(nw.ot || "").replace(/"/g, "&quot;")}">${nw.t}</a>${nw.ot ? `<div class="orig">${nw.ot}</div>` : ""}<span class="src">${nw.s} · ${nw.d}</span></li>`).join("") : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>
     </div>`;
 }
