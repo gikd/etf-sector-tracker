@@ -4,24 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>핵심 태제 트래킹</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0e1117; --card: #181c25; --card-hover: #1f2430;
-    --text: #e6e9ef; --muted: #8b93a3; --border: #262c3a;
-    --accent: #5b9cff; --up: #4ade80; --down: #f87171;
+    --bg: #0b0b0a; --card: #141311; --card-hover: #1c1a17;
+    --text: #ece5d6; --muted: #8a8275; --border: #272521;
+    --accent: #e8472b; --up: #56c98a; --down: #ef6f5c;
+    --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+    --serif: "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
   }
   * { box-sizing: border-box; margin: 0; }
   body {
     background: var(--bg); color: var(--text);
-    font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
-    padding: 18px 20px 60px; max-width: 1180px; margin: 0 auto;
+    font-family: var(--sans);
+    padding: 0 22px 64px; max-width: 1160px; margin: 0 auto;
   }
-  .nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-  .nav a { text-decoration: none; font-size: 14px; padding: 7px 16px; border-radius: 9px;
-    border: 1px solid var(--border); color: var(--muted); background: var(--card); }
-  .nav a.cur { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .nav { display: flex; gap: 22px; margin: 0 0 22px; padding: 14px 2px 0;
+    border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .nav a { text-decoration: none; font-size: 13px; font-weight: 700; padding: 0 0 12px;
+    color: var(--muted); letter-spacing: .01em; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .nav a.cur { color: var(--text); border-bottom-color: var(--accent); }
+  .nav a:hover { color: var(--text); }
   header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
-  h1 { font-size: 22px; font-weight: 700; }
+  h1 { font-size: 28px; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; }
   .updated { color: var(--muted); font-size: 13px; }
   .note { color: var(--muted); font-size: 13px; margin: 6px 0 22px; line-height: 1.6; }
 
@@ -33,14 +40,14 @@
 
   /* 테제 섹션 */
   .thesis { margin-bottom: 34px; }
-  .th-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-  .th-head h2 { font-size: 18px; }
+  .th-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 7px; }
+  .th-head h2 { font-size: 22px; font-weight: 900; letter-spacing: -.025em; }
   .th-status { font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; }
-  .th-status.ok { background: rgba(74,222,128,.18); color: var(--up); }
-  .th-status.watch { background: rgba(251,191,36,.16); color: #fbbf24; }
-  .th-status.against { background: rgba(248,113,113,.16); color: var(--down); }
-  .th-num { color: var(--muted); font-size: 13px; font-weight: 700; }
-  .th-summary { font-size: 13.5px; line-height: 1.7; color: #cdd3df; margin: 2px 0 4px; max-width: 820px; }
+  .th-status.ok { background: rgba(86,201,138,.18); color: var(--up); }
+  .th-status.watch { background: rgba(232,165,71,.16); color: #e8a547; }
+  .th-status.against { background: rgba(239,111,92,.16); color: var(--down); }
+  .th-num { color: var(--accent); font-size: 13px; font-weight: 700; }
+  .th-summary { font-family: var(--serif); font-size: 16px; line-height: 1.95; color: var(--text); margin: 4px 0 10px; max-width: 800px; }
   .th-ev { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 
   .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); }
@@ -65,7 +72,7 @@
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 50; display: none;
     align-items: flex-start; justify-content: center; padding: 4vh 16px; overflow-y: auto; }
   .modal-bg.open { display: flex; }
-  .modal { background: #141823; border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 880px; padding: 20px 22px 18px; }
+  .modal { background: #161410; border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 880px; padding: 20px 22px 18px; }
   .modal-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .modal-head h3 { font-size: 19px; }
   .modal-head .px { font-size: 17px; font-weight: 700; }

@@ -4,20 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글로벌 섹터 ETF 자금 흐름 트래커</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0e1117; --card: #181c25; --card-hover: #1f2430;
-    --text: #e6e9ef; --muted: #8b93a3; --border: #262c3a;
-    --accent: #5b9cff; --up: #4ade80; --down: #f87171;
+    --bg: #0b0b0a; --card: #141311; --card-hover: #1c1a17;
+    --text: #ece5d6; --muted: #8a8275; --border: #272521;
+    --accent: #e8472b; --up: #56c98a; --down: #ef6f5c;
+    --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+    --serif: "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
   }
   * { box-sizing: border-box; margin: 0; }
   body {
     background: var(--bg); color: var(--text);
-    font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
-    padding: 24px 20px 60px; max-width: 1180px; margin: 0 auto;
+    font-family: var(--sans);
+    padding: 0 22px 64px; max-width: 1160px; margin: 0 auto;
   }
   header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 6px; }
-  h1 { font-size: 22px; font-weight: 700; }
+  h1 { font-size: 28px; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; }
   .updated { color: var(--muted); font-size: 13px; }
   .note { color: var(--muted); font-size: 13px; margin: 6px 0 20px; line-height: 1.6; }
 
@@ -32,8 +37,8 @@
   }
   .tabs button { padding: 5px 13px; font-size: 13px; }
 
-  h2 { font-size: 16px; margin: 30px 0 4px; }
-  .h2-sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+  h2 { font-size: 19px; font-weight: 900; letter-spacing: -.02em; margin: 34px 0 4px; }
+  .h2-sub { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
   .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 
   .signal-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
@@ -70,7 +75,7 @@
   }
   .lg .dot { width: 8px; height: 8px; border-radius: 99px; }
   .lg b { color: var(--text); }
-  .lg.pinned { border-color: var(--accent); background: rgba(91,156,255,.12); }
+  .lg.pinned { border-color: var(--accent); background: rgba(232,71,43,.12); }
 
   .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .card {
@@ -108,7 +113,7 @@
   }
   .modal-bg.open { display: flex; }
   .modal {
-    background: #141823; border: 1px solid var(--border); border-radius: 16px;
+    background: #161410; border: 1px solid var(--border); border-radius: 16px;
     width: 100%; max-width: 880px; padding: 20px 22px 18px;
   }
   .modal-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -135,10 +140,12 @@
   .hold svg { display: block; width: 100%; height: 22px; opacity: .8; }
   .hold .h-sub { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; }
   .hold .h-stats { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .nav { display: flex; gap: 8px; margin-bottom: 16px; }
-  .nav a { text-decoration: none; font-size: 14px; padding: 7px 16px; border-radius: 9px;
-    border: 1px solid var(--border); color: var(--muted); background: var(--card); }
-  .nav a.cur { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .nav { display: flex; gap: 22px; margin: 0 0 22px; padding: 14px 2px 0;
+    border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .nav a { text-decoration: none; font-size: 13px; font-weight: 700; padding: 0 0 12px;
+    color: var(--muted); letter-spacing: .01em; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .nav a.cur { color: var(--text); border-bottom-color: var(--accent); }
+  .nav a:hover { color: var(--text); }
 </style>
 </head>
 <body>
