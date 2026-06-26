@@ -38,6 +38,11 @@
   .weeks button { background: var(--card); color: var(--muted); border: 1px solid var(--border);
     border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
   .weeks button.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  #krtoggle { margin-left: auto; font-family: var(--mono); font-size: 12px; }
+  #krtoggle.kr-on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .kr-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; margin: 12px 0 7px; padding-top: 11px; border-top: 1px solid var(--border); }
+  .card.etf { border-style: dashed; }
+  .card.etf .etf-tag { color: var(--accent); font-weight: 600; }
 
   /* 테제 섹션 */
   .thesis { margin-bottom: 34px; }
@@ -115,6 +120,7 @@
 
 <script src="megacap.js"></script>
 <script src="theses.js"></script>
+<script src="kr_etf.js"></script>
 <script>
 const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
 const CCY = {
@@ -123,6 +129,8 @@ const CCY = {
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
 let STOCKS = {}, THESES = null, curWeek = 0, modalWin = 63, modalTicker = null;
+let showKr = false;
+try { showKr = !!localStorage.getItem("showKr"); } catch (e) {}
 const byTicker = t => STOCKS[t];
 
 const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
@@ -140,23 +148,26 @@ function spark(values) {
 }
 
 function card(s) {
-  const peNow = s.pe_now != null ? s.pe_now : "–";
-  const peNext = s.pe_next != null ? s.pe_next : "–";
   const sp = s.candles ? s.candles.c.slice(-42) : s.spark;
-  return `<div class="card" onclick="openModal('${s.ticker}')">
+  const sub = s.is_etf
+    ? `<div class="c-per"><span class="etf-tag">한국 ETF</span> ${s.theme || ""}</div>`
+    : `<div class="c-per"><span class="pl">올해</span> ${s.pe_now != null ? s.pe_now : "–"} <span class="dot">·</span> <span class="pl">내년</span> <b>${s.pe_next != null ? s.pe_next : "–"}</b></div>`;
+  return `<div class="card${s.is_etf ? " etf" : ""}" onclick="openModal('${s.ticker}')">
     <div class="c-top"><span class="nm">${s.name}</span><span class="today ${cls(s.r1d)}">${fmt(s.r1d)}</span></div>
-    <div class="tk">${s.ticker}${s.rank ? ` · 시총 ${s.rank}위` : ""}</div>
+    <div class="tk">${s.ticker.replace(".KS", "")}${s.rank ? ` · 시총 ${s.rank}위` : ""}</div>
     ${spark(sp)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
-    <div class="c-per"><span class="pl">올해</span> ${peNow} <span class="dot">·</span> <span class="pl">내년</span> <b>${peNext}</b></div>
+    ${sub}
   </div>`;
 }
 
 function renderWeeks() {
   const ws = THESES.weeks || [];
   document.getElementById("weeks").innerHTML = ws.map((w, i) =>
-    `<button class="${i === curWeek ? "active" : ""}" onclick="setWeek(${i})">${w.week}</button>`).join("");
+    `<button class="${i === curWeek ? "active" : ""}" onclick="setWeek(${i})">${w.week}</button>`).join("")
+    + `<button id="krtoggle" class="${showKr ? "kr-on" : ""}" onclick="toggleKr()">한국 ETF ${showKr ? "ON" : "보기"}</button>`;
 }
+function toggleKr() { showKr = !showKr; try { localStorage.setItem("showKr", showKr ? "1" : ""); } catch (e) {} renderWeeks(); renderBoard(); }
 function setWeek(i) { curWeek = i; renderWeeks(); renderBoard(); }
 function renderBoard() {
   const w = (THESES.weeks || [])[curWeek];
@@ -164,10 +175,14 @@ function renderBoard() {
   document.getElementById("updated").textContent = `${w.week} 기준 · 출처: 주간복기 ${w.week}`;
   document.getElementById("board").innerHTML = (w.theses || []).map((t, i) => {
     const cards = (t.tickers || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("");
+    const krCards = showKr ? (t.kr || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("") : "";
+    const krBlock = krCards
+      ? `<div class="kr-label">한국 ETF</div><div class="grid">${krCards}</div>` : "";
     return `<section class="thesis">
       <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2></div>
       <div class="th-summary">${t.summary}</div>
       <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단(글로벌 TOP100)에 없습니다.</div>`}</div>
+      ${krBlock}
     </section>`;
   }).join("");
 }
@@ -208,7 +223,7 @@ function renderModal() {
   const per = (s.pe_now || s.pe_next)
     ? `<span class="chip per">선행PER ${s.pe_now ? "올해 " + s.pe_now : ""}${s.pe_now && s.pe_next ? " → " : ""}${s.pe_next ? "내년 " + s.pe_next : ""}</span>` : "";
   document.getElementById("modal").innerHTML = `
-    <div class="modal-head"><h3>${s.name} <span style="color:var(--muted);font-size:14px">${s.ticker} · ${s.sector}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
+    <div class="modal-head"><h3>${s.name} <span style="color:var(--muted);font-size:14px">${s.ticker.replace(".KS", "")} · ${s.is_etf ? "한국 ETF · " + (s.theme || "") : s.sector}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
       <span class="px">${fmtPx(s.price, s.ccy)}</span><span class="${cls(s.r1d)}" style="font-weight:700">${fmt(s.r1d)}</span>
       <button class="close" onclick="closeModal()">✕</button></div>
     <div class="modal-chips">
@@ -228,9 +243,12 @@ function renderModal() {
 document.getElementById("modal-bg").addEventListener("click", e => { if (e.target.id === "modal-bg") closeModal(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
-function indexStocks(d) { STOCKS = {}; (d.stocks || []).forEach(s => { STOCKS[s.ticker] = s; }); }
-function boot(mega, theses) {
+function indexStocks(d) { (d.stocks || []).forEach(s => { STOCKS[s.ticker] = s; }); }
+function indexEtfs(d) { (d && d.etfs || []).forEach(s => { STOCKS[s.ticker] = s; }); }
+function boot(mega, theses, kr) {
+  STOCKS = {};
   if (mega) indexStocks(mega);
+  if (kr) indexEtfs(kr);
   THESES = theses;
   if (!THESES || !THESES.weeks) return;
   curWeek = 0;
@@ -240,8 +258,9 @@ function boot(mega, theses) {
 Promise.all([
   fetch("megacap.json?t=" + Date.now()).then(r => r.json()).catch(() => window.__MEGACAP__),
   fetch("theses.json?t=" + Date.now()).then(r => r.json()).catch(() => window.__THESES__),
-]).then(([mega, theses]) => boot(mega || window.__MEGACAP__, theses || window.__THESES__))
-  .catch(() => boot(window.__MEGACAP__, window.__THESES__));
+  fetch("kr_etf.json?t=" + Date.now()).then(r => r.json()).catch(() => window.__KR_ETF__),
+]).then(([mega, theses, kr]) => boot(mega || window.__MEGACAP__, theses || window.__THESES__, kr || window.__KR_ETF__))
+  .catch(() => boot(window.__MEGACAP__, window.__THESES__, window.__KR_ETF__));
 </script>
 </body>
 </html>
