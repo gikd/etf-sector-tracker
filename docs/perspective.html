@@ -6,7 +6,7 @@
 <title>핵심 태제 트래킹</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0b0b0a; --card: #141311; --card-hover: #1c1a17;
@@ -14,6 +14,7 @@
     --accent: #e8472b; --up: #56c98a; --down: #ef6f5c;
     --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
     --serif: "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
   }
   * { box-sizing: border-box; margin: 0; }
   body {
@@ -50,21 +51,19 @@
   .th-summary { font-family: var(--serif); font-size: 16px; line-height: 1.95; color: var(--text); margin: 4px 0 10px; max-width: 800px; }
   .th-ev { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 
-  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px 9px; cursor: pointer; transition: transform .08s, border-color .08s; }
-  .card:hover { transform: translateY(-2px); border-color: #3a4357; }
-  .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-  .card .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card .tk { color: var(--muted); font-size: 11px; margin-top: 1px; }
-  .per-row { display: flex; gap: 8px; margin: 9px 0 3px; }
-  .per-item { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 5px 9px; }
-  .per-lbl { font-size: 10.5px; color: var(--muted); }
-  .per-val { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
-  .per-val.accent { color: var(--accent); }
-  .card svg { display: block; width: 100%; height: 34px; margin: 5px 0 4px; }
-  .card .sub { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
-  .card .px { color: var(--text); font-weight: 600; }
-  .card .today { font-weight: 700; }
+  .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 13px 11px; cursor: pointer; transition: border-color .1s, background .1s; }
+  .card:hover { background: var(--card-hover); border-color: #3a362f; }
+  .c-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .card .nm { font-weight: 700; font-size: 14.5px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .today { font-family: var(--mono); font-size: 12.5px; font-weight: 600; flex-shrink: 0; }
+  .card .tk { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .card svg { display: block; width: 100%; height: 36px; margin: 9px 0; }
+  .c-px { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); }
+  .c-per { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .c-per .pl { font-family: var(--sans); font-size: 10px; }
+  .c-per b { color: var(--accent); font-weight: 600; }
+  .c-per .dot { opacity: .4; margin: 0 2px; }
   .pos { color: var(--up); } .neg { color: var(--down); }
   footer { margin-top: 30px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 
@@ -145,15 +144,11 @@ function card(s) {
   const peNext = s.pe_next != null ? s.pe_next : "–";
   const sp = s.candles ? s.candles.c.slice(-42) : s.spark;
   return `<div class="card" onclick="openModal('${s.ticker}')">
-    <div class="top"><span class="nm">${s.name}</span></div>
+    <div class="c-top"><span class="nm">${s.name}</span><span class="today ${cls(s.r1d)}">${fmt(s.r1d)}</span></div>
     <div class="tk">${s.ticker}${s.rank ? ` · 시총 ${s.rank}위` : ""}</div>
-    <div class="per-row">
-      <div class="per-item"><div class="per-lbl">올해 PER</div><div class="per-val">${peNow}</div></div>
-      <div class="per-item"><div class="per-lbl">내년 PER</div><div class="per-val accent">${peNext}</div></div>
-    </div>
     ${spark(sp)}
-    <div class="sub"><span class="px">${fmtPx(s.price, s.ccy)}</span>
-      <span class="today ${cls(s.r1d)}">${fmt(s.r1d)}</span></div>
+    <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
+    <div class="c-per"><span class="pl">올해</span> ${peNow} <span class="dot">·</span> <span class="pl">내년</span> <b>${peNext}</b></div>
   </div>`;
 }
 
