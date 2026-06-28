@@ -31,6 +31,8 @@
   header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
   h1 { font-size: 28px; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; }
   .updated { color: var(--muted); font-size: 13px; }
+  .src-link { color: var(--accent); font-weight: 700; text-decoration: none; border-bottom: 1px solid transparent; }
+  .src-link:hover { border-bottom-color: var(--accent); }
   .note { color: var(--muted); font-size: 13px; margin: 6px 0 22px; line-height: 1.6; }
 
   /* 주차 선택 */
@@ -133,6 +135,14 @@ let showKr = false;
 try { showKr = !!localStorage.getItem("showKr"); } catch (e) {}
 const byTicker = t => STOCKS[t];
 
+// 주간복기 멤버 사이트 원문 URL — slug = "{YY}-{주차}" (예: 26년 25주차 → 26-25)
+const REVIEW_BASE = "https://weekly-review-z8c8.vercel.app/reviews";
+function reviewUrl(w) {
+  const wk = parseInt(String(w.week), 10);
+  const yy = w.date ? w.date.slice(2, 4) : "";
+  return (wk && yy) ? `${REVIEW_BASE}/${yy}-${wk}` : null;
+}
+
 const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 const cls = v => v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "";
 function fmtPx(v, ccy) {
@@ -172,7 +182,11 @@ function setWeek(i) { curWeek = i; renderWeeks(); renderBoard(); }
 function renderBoard() {
   const w = (THESES.weeks || [])[curWeek];
   if (!w) return;
-  document.getElementById("updated").textContent = `${w.week} 기준 · 출처: 주간복기 ${w.week}`;
+  const url = reviewUrl(w);
+  document.getElementById("updated").innerHTML = `${w.week} 기준 · 출처: `
+    + (url
+      ? `<a class="src-link" href="${url}" target="_blank" rel="noopener">주간복기 ${w.week} 원문 보기 →</a>`
+      : `주간복기 ${w.week}`);
   document.getElementById("board").innerHTML = (w.theses || []).map((t, i) => {
     const cards = (t.tickers || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("");
     const krCards = showKr ? (t.kr || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("") : "";
