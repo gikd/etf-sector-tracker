@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>핵심 태제 트래킹</title>
-<script>document.documentElement.className=(function(){try{return localStorage.getItem("etf-theme")||"theme-cream"}catch(e){return "theme-cream"}})();</script>
+<script>document.documentElement.className=(function(){try{return localStorage.getItem("etf-theme")||"theme-dark"}catch(e){return "theme-dark"}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
@@ -197,7 +197,7 @@ function renderModal() {
   document.getElementById("modal").innerHTML = `
     <div class="modal-head"><h3>${s.name} <span style="color:var(--muted);font-size:14px">${s.ticker.replace(".KS", "")} · ${s.is_etf ? "한국 ETF · " + (s.theme || "") : s.sector}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
       <span class="px">${fmtPx(s.price, s.ccy)}</span><span class="${cls(s.r1d)}" style="font-weight:700">${fmt(s.r1d)}</span>
-      <button class="cap-btn" onclick="captureChart()" title="차트를 이미지로 저장">↓ 캡처</button>
+      <button class="cap-btn" onclick="captureChart()" title="차트를 클립보드에 복사">복사</button>
       <button class="close" onclick="closeModal()">✕</button></div>
     <div class="modal-chips">
       <span class="chip">1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>
