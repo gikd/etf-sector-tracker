@@ -130,7 +130,11 @@ footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line);
 .modal-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
 .modal-head h3 { font-size:20px; font-weight:800; letter-spacing:-.02em; }
 .modal-head .px { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; }
-.modal-head .close { margin-left:auto; cursor:pointer; color:var(--muted); font-size:20px; background:none; border:none; line-height:1; }
+.cap-btn { margin-left:auto; background:transparent; border:1.5px solid var(--line-strong); color:var(--muted);
+  border-radius:999px; padding:4px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--sans);
+  letter-spacing:.02em; transition:all .18s; white-space:nowrap; }
+.cap-btn:hover { border-color:var(--clay); color:var(--clay); }
+.modal-head .close { margin-left:10px; cursor:pointer; color:var(--muted); font-size:20px; background:none; border:none; line-height:1; }
 .modal-head .close:hover { color:var(--ink); }
 .modal-chips { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 14px; }
 .chip { font-size:12px; padding:3px 10px; border-radius:999px; background:var(--card);

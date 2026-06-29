@@ -80,6 +80,7 @@
 <script src="theses.js"></script>
 <script src="kr_etf.js"></script>
 <script src="theme.js"></script>
+<script src="capture.js"></script>
 <script>
 const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
 const CCY = {
@@ -196,6 +197,7 @@ function renderModal() {
   document.getElementById("modal").innerHTML = `
     <div class="modal-head"><h3>${s.name} <span style="color:var(--muted);font-size:14px">${s.ticker.replace(".KS", "")} · ${s.is_etf ? "한국 ETF · " + (s.theme || "") : s.sector}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
       <span class="px">${fmtPx(s.price, s.ccy)}</span><span class="${cls(s.r1d)}" style="font-weight:700">${fmt(s.r1d)}</span>
+      <button class="cap-btn" onclick="captureChart()" title="차트를 이미지로 저장">↓ 캡처</button>
       <button class="close" onclick="closeModal()">✕</button></div>
     <div class="modal-chips">
       <span class="chip">1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span>

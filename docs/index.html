@@ -159,6 +159,7 @@
 
 <script src="data.js"></script>
 <script src="theme.js"></script>
+<script src="capture.js"></script>
 <script>
 const PERIODS = [
   { key: "r1d", label: "1일" },
@@ -443,6 +444,7 @@ function renderModal() {
       <h3>${e.name} <span style="color:var(--muted);font-size:14px">${e.ticker} · ${GROUP_LABEL[e.group]}</span></h3>
       <span class="px">$${e.price.toFixed(2)}</span>
       <span class="${cls(e.r1d)}" style="font-weight:700">${fmt(e.r1d)}</span>
+      <button class="cap-btn" onclick="captureChart()" title="차트를 이미지로 저장">↓ 캡처</button>
       <button class="close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-chips">
