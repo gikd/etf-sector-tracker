@@ -1,0 +1,150 @@
+/* ==================================================================
+   ETF 트래커 — 듀얼 테마 디자인 시스템
+   .theme-cream : 묘수의 관점 broadsheet (크림 페이퍼 · 잉크 · 브릭)  ← 기본
+   .theme-dark  : 기존 다크 대시보드 (검정 · 오렌지 액센트)
+   색·구조 차이를 전부 CSS 변수로 빼서, 컴포넌트 규칙은 한 번만 쓴다.
+   ================================================================== */
+
+/* ── 새 스타일 (크림) ─────────────────────────────────────────── */
+html.theme-cream {
+  --paper:#f5f1e7; --paper-2:#ece7d8; --card:#efe8d6; --card-hover:#e7dfca;
+  --ink:#0e0e0c; --ink-soft:#2a2925; --muted:#6b6a62; --faint:#9a978c;
+  --line:rgba(14,14,12,.18); --line-strong:rgba(14,14,12,.34);
+  --clay:#b5482b; --clay-deep:#9c3c22; --accent:#b5482b; --clay-rgb:181,72,43;
+  --up:#2f7d57; --down:#b5482b;
+  --heat-pos:47,125,87; --heat-neg:181,72,43;
+  --chart-grid:rgba(14,14,12,.12); --chart-grid-zero:rgba(14,14,12,.34); --chart-axis:#6b6a62;
+  /* fonts */
+  --sans:"Pretendard Variable","Pretendard","Apple SD Gothic Neo",-apple-system,system-ui,sans-serif;
+  --serif:"Noto Serif KR",ui-serif,Georgia,serif;
+  --display:"Staatliches",var(--sans);
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
+  /* 구조 스위치 */
+  --h1-size:34px; --h1-weight:800; --h1-spacing:-.025em;
+  --kicker-display:block;
+  --nav-transform:uppercase; --nav-spacing:.12em; --nav-size:12px; --nav-weight:800;
+  --h2-size:13px; --h2-transform:uppercase; --h2-weight:800; --h2-spacing:.05em;
+  --h2-mt:40px; --h2-rule:1px solid var(--line); --h2-pt:18px; --h2-dot:inline-block;
+  --prose-font:var(--serif); --note-color:var(--ink-soft); --news-font:var(--serif);
+  --btn-bg:transparent; --btn-color:var(--muted); --btn-border:1.5px solid var(--line-strong); --btn-weight:700; --btn-radius:999px;
+  --btn-active-bg:var(--ink); --btn-active-fg:var(--paper); --btn-active-border:var(--ink);
+  --obj-radius:4px; --card-radius:3px;
+  --vol-hot:var(--clay-deep);
+  --modal-bg:var(--paper); --modal-radius:6px; --modal-border:var(--line-strong);
+  --scrim:rgba(14,14,12,.55); --shadow:0 24px 60px rgba(14,14,12,.22);
+  --label-transform:uppercase; --label-spacing:.1em; --label-color:var(--clay);
+}
+
+/* ── 기존 스타일 (다크) ───────────────────────────────────────── */
+html.theme-dark {
+  --paper:#0b0b0a; --paper-2:#141311; --card:#141311; --card-hover:#1c1a17;
+  --ink:#ece5d6; --ink-soft:#ece5d6; --muted:#8a8275; --faint:#6b655a;
+  --line:#272521; --line-strong:#3a352f;
+  --clay:#e8472b; --clay-deep:#e8472b; --accent:#e8472b; --clay-rgb:232,71,43;
+  --up:#56c98a; --down:#ef6f5c;
+  --heat-pos:22,163,74; --heat-neg:220,38,38;
+  --chart-grid:#222838; --chart-grid-zero:#3a4357; --chart-axis:#8b93a3;
+  /* fonts */
+  --sans:"Noto Sans KR","Apple SD Gothic Neo","Pretendard",-apple-system,sans-serif;
+  --serif:"Nanum Myeongjo","Apple SD Gothic Neo",serif;
+  --display:var(--sans);
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
+  /* 구조 스위치 */
+  --h1-size:28px; --h1-weight:900; --h1-spacing:-.03em;
+  --kicker-display:none;
+  --nav-transform:none; --nav-spacing:.01em; --nav-size:13px; --nav-weight:700;
+  --h2-size:19px; --h2-transform:none; --h2-weight:900; --h2-spacing:-.02em;
+  --h2-mt:34px; --h2-rule:0; --h2-pt:0; --h2-dot:none;
+  --prose-font:var(--sans); --note-color:var(--muted); --news-font:var(--sans);
+  --btn-bg:var(--card); --btn-color:var(--muted); --btn-border:1px solid var(--line); --btn-weight:600; --btn-radius:8px;
+  --btn-active-bg:var(--accent); --btn-active-fg:#fff; --btn-active-border:var(--accent);
+  --obj-radius:12px; --card-radius:10px;
+  --vol-hot:#fbbf24;
+  --modal-bg:#161410; --modal-radius:16px; --modal-border:var(--line);
+  --scrim:rgba(0,0,0,.65); --shadow:0 20px 50px rgba(0,0,0,.5);
+  --label-transform:none; --label-spacing:0; --label-color:var(--ink);
+}
+
+/* ── 리셋 / 베이스 ────────────────────────────────────────────── */
+* { box-sizing:border-box; margin:0; }
+html { -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+body {
+  background:var(--paper); color:var(--ink); font-family:var(--sans); letter-spacing:-.011em;
+  padding:0 22px 72px; max-width:1180px; margin:0 auto;
+  transition:background .25s, color .25s;
+}
+::selection { background:var(--clay); color:#fff; }
+a { color:inherit; }
+
+/* ── 상단 네비 + 테마 토글 ───────────────────────────────────── */
+.nav { display:flex; gap:24px; align-items:flex-end; margin:0 0 26px; padding:16px 2px 0;
+  border-bottom:1px solid var(--line-strong); flex-wrap:wrap; }
+.nav a { text-decoration:none; font-size:var(--nav-size); font-weight:var(--nav-weight);
+  text-transform:var(--nav-transform); letter-spacing:var(--nav-spacing); padding:0 0 13px;
+  color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .2s; }
+.nav a.cur { color:var(--ink); border-bottom-color:var(--clay); }
+.nav a:hover { color:var(--ink); }
+.theme-toggle { margin-left:auto; margin-bottom:9px; background:transparent; border:1.5px solid var(--line-strong);
+  color:var(--muted); border-radius:999px; padding:5px 13px; font-size:11px; font-weight:700; cursor:pointer;
+  font-family:var(--sans); letter-spacing:.04em; transition:all .18s; }
+.theme-toggle:hover { border-color:var(--ink); color:var(--ink); }
+
+/* ── 마스트헤드 ──────────────────────────────────────────────── */
+.kicker { display:var(--kicker-display); font-size:.7rem; font-weight:800; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--clay); margin-bottom:8px; }
+header { display:flex; flex-wrap:wrap; align-items:baseline; gap:14px; margin-bottom:6px; }
+h1 { font-size:var(--h1-size); font-weight:var(--h1-weight); letter-spacing:var(--h1-spacing); line-height:1.04; }
+.updated { color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums; }
+.note { font-family:var(--prose-font); color:var(--note-color); font-size:14px;
+  margin:12px 0 24px; line-height:1.65; max-width:64ch; }
+.note b { font-weight:600; }
+
+/* ── 버튼(기간/주차/탭) ──────────────────────────────────────── */
+.periods, .weeks, .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.periods button, .weeks button, .tabs button {
+  background:var(--btn-bg); color:var(--btn-color); border:var(--btn-border); border-radius:var(--btn-radius);
+  padding:6px 15px; font-size:13px; font-weight:var(--btn-weight); cursor:pointer; font-family:var(--sans); transition:all .18s; }
+.periods button:hover, .weeks button:hover, .tabs button:hover { border-color:var(--ink); color:var(--ink); }
+.periods button.active, .weeks button.active, .weeks button.kr-on, .tabs button.active {
+  background:var(--btn-active-bg); color:var(--btn-active-fg); border-color:var(--btn-active-border); }
+.tabs button { padding:5px 13px; font-size:12px; }
+
+/* ── 섹션 헤더 ───────────────────────────────────────────────── */
+h2 { font-size:var(--h2-size); font-weight:var(--h2-weight); letter-spacing:var(--h2-spacing);
+  text-transform:var(--h2-transform); margin:var(--h2-mt) 0 4px; padding-top:var(--h2-pt);
+  border-top:var(--h2-rule); display:flex; align-items:center; gap:9px; }
+h2::before { content:""; display:var(--h2-dot); width:7px; height:7px; background:var(--clay); border-radius:50%; flex-shrink:0; }
+.h2-sub { font-family:var(--prose-font); color:var(--muted); font-size:13px; margin-bottom:16px; line-height:1.5; }
+
+footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line);
+  color:var(--muted); font-size:12px; line-height:1.7; font-family:var(--prose-font); }
+
+.pos { color:var(--up); } .neg { color:var(--down); }
+
+/* ── 상세 모달 (3 페이지 공용) ───────────────────────────────── */
+.modal-bg { position:fixed; inset:0; background:var(--scrim); z-index:50; display:none;
+  align-items:flex-start; justify-content:center; padding:4vh 16px; overflow-y:auto; backdrop-filter:blur(2px); }
+.modal-bg.open { display:flex; }
+.modal { background:var(--modal-bg); border:1px solid var(--modal-border); border-radius:var(--modal-radius);
+  width:100%; max-width:880px; padding:22px 24px 20px; box-shadow:var(--shadow); }
+.modal-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.modal-head h3 { font-size:20px; font-weight:800; letter-spacing:-.02em; }
+.modal-head .px { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; }
+.modal-head .close { margin-left:auto; cursor:pointer; color:var(--muted); font-size:20px; background:none; border:none; line-height:1; }
+.modal-head .close:hover { color:var(--ink); }
+.modal-chips { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 14px; }
+.chip { font-size:12px; padding:3px 10px; border-radius:999px; background:var(--card);
+  border:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.chip.per { border-color:var(--clay); }
+.chip b { font-variant-numeric:tabular-nums; }
+.modal .tabs { margin-bottom:10px; }
+.news h4, .holdings h4 { font-size:11px; text-transform:var(--label-transform); letter-spacing:var(--label-spacing);
+  color:var(--label-color); margin:20px 0 8px; font-weight:800; }
+.news ul { padding:0; }
+.news a { color:var(--ink); text-decoration:none; font-size:14px; font-family:var(--news-font); }
+.news a:hover { color:var(--clay); }
+.news li { list-style:none; padding:8px 0; border-bottom:1px solid var(--line); line-height:1.5; }
+.news .src { color:var(--muted); font-size:11.5px; margin-left:8px; }
+.news .orig { color:var(--muted); font-size:11.5px; margin-top:2px; opacity:.8; }
+.holdings .hold-note { color:var(--muted); font-size:11.5px; font-weight:400; margin-left:6px;
+  text-transform:none; letter-spacing:0; }
