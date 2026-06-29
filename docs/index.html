@@ -520,7 +520,7 @@ function boot(d) {
   document.getElementById("updated").textContent = `기준일 ${last} · 갱신 ${d.updated}`;
   renderAll();
 }
-fetch("data.json").then(r => r.json()).then(boot).catch(() => {
+fetch("data.json?t=" + Date.now()).then(r => r.json()).then(boot).catch(() => {
   // file:// 로 직접 열면 fetch가 막히므로 data.js 폴백 사용
   if (window.__ETF_DATA__) boot(window.__ETF_DATA__);
   else document.body.insertAdjacentHTML("beforeend",
