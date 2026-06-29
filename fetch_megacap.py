@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """[매일] 글로벌 메가캡 시세·모멘텀·뉴스 갱신 + 선행 PER 계산.
 
-명단(TOP100)은 fetch_universe.py가 주 1회 만든 docs/megacap_universe.json 사용.
+명단(TOP300)은 fetch_universe.py가 주 1회 만든 docs/megacap_universe.json 사용.
 이 스크립트는 매일: 시세·일봉 캔들·한국어 뉴스 갱신, 명단의 EPS로 올해/내년 PER 계산.
 docs/megacap.json / megacap.js 생성.
 """

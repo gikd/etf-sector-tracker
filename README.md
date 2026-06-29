@@ -35,12 +35,12 @@ python3 -m http.server -d docs # http://localhost:8000 접속
 
 ## 글로벌 메가캡 (megacap.html)
 
-전 세계 시총 최상위 100종목을 직접 섹터 분류(11개)해, **섹터 강세 순위 + 섹터별 모멘텀 리더**를 봄.
+전 세계 시총 최상위 300종목을 직접 섹터 분류(13개)해, **섹터 강세 순위 + 섹터별 모멘텀 리더**를 봄.
 "자금 쏠림 → 강한 섹터의 강한 종목"을 포착하는 관측 도구. 기간(1주~YTD) 전환, 52주 신고가·저유동 배지.
 
 **2단 갱신 구조**:
 - **시세(매일)**: `fetch_megacap.py` — 명단을 읽어 가격·모멘텀만 일단위 갱신 (무인증 차트 API)
-- **명단(주 1회)**: `fetch_universe.py` — 후보군(~140) 시총을 Yahoo crumb 인증으로 받아 USD 환산·랭킹 → TOP100 → `megacap_universe.json`. 일요일 `universe.yml` 워크플로로 갱신.
+- **명단(주 1회)**: `fetch_universe.py` — 후보군(~360) 시총을 Yahoo crumb 인증으로 받아 USD 환산·랭킹 → TOP300 → `megacap_universe.json`. 일요일 `universe.yml` 워크플로로 갱신.
   후보군/섹터 분류는 `fetch_universe.py`의 `CANDIDATES`에서 편집.
 
 ## 구성 변경

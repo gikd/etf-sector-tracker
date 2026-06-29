@@ -71,7 +71,7 @@
 <div class="weeks" id="weeks"></div>
 <div id="board"></div>
 <footer>
-  종목 데이터: 글로벌 메가캡(시총 TOP100)에서 매칭. 테제는 주간복기 관점의 짧은 요약이며 원문이 아닙니다.
+  종목 데이터: 글로벌 메가캡(시총 TOP300)에서 매칭. 테제는 주간복기 관점의 짧은 요약이며 원문이 아닙니다.
 </footer>
 
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
@@ -152,7 +152,7 @@ function renderBoard() {
     return `<section class="thesis">
       <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2></div>
       <div class="th-summary">${t.summary}</div>
-      <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단(글로벌 TOP100)에 없습니다.</div>`}</div>
+      <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단(글로벌 TOP300)에 없습니다.</div>`}</div>
       ${krBlock}
     </section>`;
   }).join("");
