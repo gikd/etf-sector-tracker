@@ -28,14 +28,18 @@ GitHub Actions 의 `schedule(cron)` 은 공개 저장소에서 예약 실행을 
 ### 2) 워커 배포
 ```bash
 cd trigger
-npx wrangler login            # 브라우저 OAuth (Cloudflare 계정 — R2 쓰는 그 계정)
-npx wrangler secret put GH_TOKEN   # 위에서 복사한 토큰 붙여넣기
+npx wrangler login                 # 브라우저 OAuth (Cloudflare 계정 — R2 쓰는 그 계정)
+npx wrangler secret put GH_TOKEN     # GitHub fine-grained PAT 붙여넣기
+npx wrangler secret put TRIGGER_KEY  # 수동 트리거 URL 잠금용 비밀키(아무 문자열)
 npx wrangler deploy
 ```
 
 ### 3) 동작 확인
-- 배포 후 출력된 `https://etf-trigger.<계정>.workers.dev` 를 브라우저로 열면 → `dispatched ✓`
-- 곧 https://github.com/gikd/etf-sector-tracker/actions 에 `workflow_dispatch` 실행이 뜨고, 데이터 커밋이 생기면 성공.
+- cron 자동 갱신은 URL 과 무관하게 동작(개장/마감 4회). 아래는 수동 트리거용.
+- **키 게이트**: 워커 URL 은 `?key=<TRIGGER_KEY>` 가 맞아야만 발사한다. 키 없으면 403(무시).
+  - `https://etf-trigger.<계정>.workers.dev/?key=<TRIGGER_KEY>` → `dispatched ✓`
+  - 키 없이/틀리게 열면 `403 forbidden` — 아무 일도 안 일어남(favicon 등 잡요청 차단).
+- 발사 후 https://github.com/gikd/etf-sector-tracker/actions 에 `workflow_dispatch` 실행이 뜨면 성공.
 
 ## 대안: 배포 없이 (cron-job.org)
 Cloudflare 가 번거로우면 https://cron-job.org (무료, 타임존 인식) 에 잡 4개를 만들어도 동일하다.

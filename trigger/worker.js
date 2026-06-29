@@ -36,8 +36,13 @@ export default {
     ctx.waitUntil(dispatch(env));
   },
 
-  // 수동 테스트용: 워커 URL 을 브라우저로 열면 즉시 한 번 트리거하고 결과를 보여줌
+  // 수동 트리거: ?key=<TRIGGER_KEY> 가 일치할 때만 발사한다.
+  // 키 없음/불일치(favicon 등 잡요청 포함)는 무시(403). cron 자동 갱신은 이 경로를 쓰지 않음.
   async fetch(request, env) {
+    const key = new URL(request.url).searchParams.get("key");
+    if (!env.TRIGGER_KEY || key !== env.TRIGGER_KEY) {
+      return new Response("forbidden — 올바른 ?key= 가 필요합니다.\n", { status: 403 });
+    }
     const res = await dispatch(env);
     const ok = res.status === 204;
     const body = ok
