@@ -9,7 +9,7 @@ import http.cookiejar
 import json
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 TOP_N = 300
@@ -232,7 +232,7 @@ def main():
         raise SystemExit(f"시총 수집 부족({len(members)}/{TOP_N}) — 기존 명단 유지")
 
     out = {
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST"),
         "count": len(members),
         "members": members,
     }

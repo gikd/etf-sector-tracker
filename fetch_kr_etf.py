@@ -8,7 +8,7 @@ import json
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # (티커, ETF명, 테마)  — 테마는 태제/섹터 매칭 키
@@ -112,7 +112,7 @@ def main():
         results = list(ex.map(fetch, KR_ETFS))
     etfs = [r for r in results if r is not None]
     failed = [k[0] for k, r in zip(KR_ETFS, results) if r is None]
-    out = {"updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"), "etfs": etfs}
+    out = {"updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST"), "etfs": etfs}
     payload = json.dumps(out, ensure_ascii=False)
     OUT.write_text(payload, encoding="utf-8")
     OUT.with_name("kr_etf.js").write_text("window.__KR_ETF__ = " + payload + ";", encoding="utf-8")

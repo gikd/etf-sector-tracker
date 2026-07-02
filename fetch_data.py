@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # (티커, 한글명, 그룹, 뉴스 검색어 — 글로벌 영문 뉴스를 검색해 한국어로 번역)
@@ -291,7 +291,7 @@ def main():
         raise SystemExit(f"수집 실패가 너무 많음 (성공 {len(etfs)}/{len(TICKERS)}, 실패: {failed})")
 
     out = {
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST"),
         "benchmark": BENCHMARK,
         "dates": bench_dates,  # 차트 x축 라벨 (전 종목 공통, 미국 거래일 기준)
         "etfs": etfs,
