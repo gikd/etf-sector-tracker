@@ -19,6 +19,13 @@
   .section-head h2 { border-top:none; padding-top:0; margin-top:0; }
   .section-head .h2-sub { margin-bottom:0; }
 
+  /* 기간 버튼 + 한국 ETF 토글 한 줄 */
+  .controls { display:flex; justify-content:space-between; align-items:center; gap:10px 16px; flex-wrap:wrap; }
+  .krtoggle { background:var(--btn-bg); color:var(--btn-color); border:var(--btn-border); border-radius:var(--btn-radius);
+    padding:6px 14px; font-size:12.5px; font-weight:var(--btn-weight); cursor:pointer; font-family:var(--sans); transition:all .18s; }
+  .krtoggle:hover { border-color:var(--ink); color:var(--ink); }
+  .krtoggle.on { background:var(--btn-active-bg); color:var(--btn-active-fg); border-color:var(--btn-active-border); }
+
   /* 시그널 카드 */
   .signal-list { display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); }
   .signal { background:var(--card); border:1px solid var(--line); border-radius:var(--card-radius);
@@ -111,7 +118,10 @@
   상대수익률은 전세계 지수(ACWI) 대비. <b>카드·막대·표를 클릭하면 일봉 차트 + 대표 종목 + 관련 뉴스가 열립니다.</b>
 </p>
 
-<div class="periods" id="periods"></div>
+<div class="controls">
+  <div class="periods" id="periods"></div>
+  <button id="krtoggle" class="krtoggle" onclick="toggleKr()">한국 ETF 보기</button>
+</div>
 
 <h2>자금 유입 시그널</h2>
 <div class="h2-sub">선택한 기간 수익률이 ACWI를 웃돌면서 거래대금이 늘어난 ETF (거래대금 비율 순)</div>
@@ -135,6 +145,12 @@
 <h2>미국 11개 섹터</h2>
 <div class="h2-sub">SPDR 섹터 ETF · 색상 = 선택한 기간 수익률 · 미니차트 = 최근 1개월</div>
 <div class="grid" id="grid-us_sector"></div>
+
+<div id="korea-wrap" style="display:none">
+  <h2>한국 섹터</h2>
+  <div class="h2-sub">국내 섹터·테마 ETF · 원화 기준 · 색상 = 선택한 기간 수익률 · 카드 클릭 = 구성종목 상세 (글로벌 집계엔 미포함)</div>
+  <div class="grid" id="grid-korea"></div>
+</div>
 
 <h2>글로벌 지역</h2>
 <div class="h2-sub">지역별 대표 지수 ETF</div>
@@ -177,7 +193,7 @@ const WINDOWS = [
   { days: 63, label: "3개월" },
   { days: 126, label: "6개월" },
 ];
-const GROUP_LABEL = Object.fromEntries(GROUPS.map(g => [g.key, g.label]));
+const GROUP_LABEL = { ...Object.fromEntries(GROUPS.map(g => [g.key, g.label])), korea: "한국 섹터" };
 // 두 테마 모두에서 또렷한 카테고리 라인 팔레트
 const PALETTE = ["#3f5e80","#2f6b6a","#b0863a","#b35f44","#7a4f6d","#3c7a4e","#9c3c22","#2b6e8c","#c06a2b","#6b5b95","#6a6a3a"];
 
@@ -232,7 +248,7 @@ function setTrendWin(d) { trendWin = d; renderGroupTabs(); renderTrend(); }
 function renderSignals() {
   const relKey = "rel_" + period;
   const hot = DATA.etfs
-    .filter(e => e.ticker !== "ACWI" && e[period] != null && e.vol_ratio != null)
+    .filter(e => e.ticker !== "ACWI" && e.group !== "korea" && e[period] != null && e.vol_ratio != null)
     .filter(e => (e[relKey] != null ? e[relKey] > 0 : e[period] > 0) && e.vol_ratio > 1.05)
     .sort((a, b) => b.vol_ratio - a.vol_ratio)
     .slice(0, 6);
@@ -338,14 +354,16 @@ function pin(t) { pinned.has(t) ? pinned.delete(t) : pinned.add(t); renderTrend(
 
 /* ── 히트맵 카드 ─────────────────────────────────────── */
 function renderGrids() {
-  for (const g of GROUPS) {
+  for (const g of [...GROUPS, { key: "korea" }]) {   // 한국 섹터 그리드도 채움(표시는 토글로)
+    const el = document.getElementById("grid-" + g.key);
+    if (!el) continue;
     const items = DATA.etfs.filter(e => e.group === g.key)
       .sort((a, b) => (b[period] ?? -999) - (a[period] ?? -999));
     const maxAbs = Math.max(3, ...items.map(e => Math.abs(e[period] ?? 0)));
-    document.getElementById("grid-" + g.key).innerHTML = items.map(e => `
+    el.innerHTML = items.map(e => `
       <div class="card" style="background:${colorFor(e[period], maxAbs)}" onclick="openModal('${e.ticker}')"
            title="${e.ticker} 고점대비 ${fmt(e.from_high)}">
-        <div class="top"><span class="tk">${e.ticker}</span>
+        <div class="top"><span class="tk">${e.ticker.replace(".KS", "")}</span>
           ${e.vol_ratio > 1.2 ? `<span class="vol-badge">거래 ×${e.vol_ratio.toFixed(1)}</span>` : ""}</div>
         <div class="nm">${e.name}</div>
         <div class="ret">${fmt(e[period])}</div>
@@ -363,7 +381,7 @@ const COLS = [
 ];
 
 function renderTable() {
-  const rows = [...DATA.etfs].sort((a, b) => {
+  const rows = DATA.etfs.filter(e => e.group !== "korea").sort((a, b) => {   // 글로벌 비교표엔 한국 미포함
     const x = a[sortKey], y = b[sortKey];
     if (x == null) return 1; if (y == null) return -1;
     return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
@@ -438,10 +456,11 @@ function openModal(ticker) {
 function renderModal() {
   const e = byTicker(modalTicker);
   if (!e) return;
+  const pxStr = e.group === "korea" ? "₩" + Math.round(e.price).toLocaleString() : "$" + e.price.toFixed(2);
   document.getElementById("modal").innerHTML = `
     <div class="modal-head">
-      <h3>${e.name} <span style="color:var(--muted);font-size:14px">${e.ticker} · ${GROUP_LABEL[e.group]}</span></h3>
-      <span class="px">$${e.price.toFixed(2)}</span>
+      <h3>${e.name} <span style="color:var(--muted);font-size:14px">${e.ticker.replace(".KS", "")} · ${GROUP_LABEL[e.group]}</span></h3>
+      <span class="px">${pxStr}</span>
       <span class="${cls(e.r1d)}" style="font-weight:700">${fmt(e.r1d)}</span>
       <button class="cap-btn" onclick="captureChart()" title="차트를 클립보드에 복사">복사</button>
       <button class="close" onclick="closeModal()">✕</button>
@@ -502,6 +521,21 @@ document.getElementById("modal-bg").addEventListener("click", ev => {
 });
 document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeModal(); });
 
+// 한국 ETF 보기 토글 — 기존 글로벌 대시보드엔 영향 없음(시그널/비교표 제외, 섹션만 표시)
+let showKr = false;
+try { showKr = !!localStorage.getItem("krIdx"); } catch (e) {}
+function toggleKr() {
+  showKr = !showKr;
+  try { localStorage.setItem("krIdx", showKr ? "1" : ""); } catch (e) {}
+  applyKr();
+}
+function applyKr() {
+  const wrap = document.getElementById("korea-wrap");
+  if (wrap) wrap.style.display = showKr ? "" : "none";
+  const b = document.getElementById("krtoggle");
+  if (b) { b.classList.toggle("on", showKr); b.textContent = showKr ? "한국 ETF ON" : "한국 ETF 보기"; }
+}
+
 function renderAll() {
   renderPeriods(); renderGroupTabs(); renderSignals();
   renderBars(); renderTrend(); renderGrids(); renderTable();
@@ -518,6 +552,7 @@ function boot(d) {
   const last = d.etfs[0]?.last_date ?? "";
   document.getElementById("updated").textContent = `기준일 ${last} · 갱신 ${d.updated}`;
   renderAll();
+  applyKr();
 }
 fetch("data.json?t=" + Date.now()).then(r => r.json()).then(boot).catch(() => {
   document.body.insertAdjacentHTML("beforeend",
