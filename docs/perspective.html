@@ -89,6 +89,7 @@ const CCY = {
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
 let STOCKS = {}, THESES = null, curWeek = 0, modalWin = 63, modalTicker = null;
+let PRICE_UPDATED = "";  // megacap.json 의 시세 갱신 시각(메가캡 페이지와 동일 소스)
 let showKr = false;
 try { showKr = !!localStorage.getItem("showKr"); } catch (e) {}
 const byTicker = t => STOCKS[t];
@@ -141,7 +142,7 @@ function renderBoard() {
   const w = (THESES.weeks || [])[curWeek];
   if (!w) return;
   const url = reviewUrl(w);
-  document.getElementById("updated").innerHTML = `${w.week} 기준 · 출처: `
+  document.getElementById("updated").innerHTML = `${w.week} 기준${PRICE_UPDATED ? " · 시세 " + PRICE_UPDATED : ""} · 출처: `
     + (url
       ? `<a class="src-link" href="${url}" target="_blank" rel="noopener">주간복기 ${w.week} 원문 보기 →</a>`
       : `주간복기 ${w.week}`);
@@ -227,7 +228,7 @@ window.__rerender = function () {
 };
 function boot(mega, theses, kr) {
   STOCKS = {};
-  if (mega) indexStocks(mega);
+  if (mega) { indexStocks(mega); PRICE_UPDATED = mega.updated || PRICE_UPDATED; }
   if (kr) indexEtfs(kr);
   THESES = theses;
   if (!THESES || !THESES.weeks) return;
