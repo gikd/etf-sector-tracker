@@ -3,7 +3,7 @@
 
 명단(TOP300)은 fetch_universe.py가 주 1회 만든 docs/megacap_universe.json 사용.
 이 스크립트는 매일: 시세·일봉 캔들·한국어 뉴스 갱신, 명단의 EPS로 올해/내년 PER 계산.
-docs/megacap.json / megacap.js 생성.
+docs/megacap.json 생성.
 """
 import json
 import time
@@ -184,7 +184,6 @@ def main():
     }
     payload = json.dumps(out, ensure_ascii=False)
     OUT.write_text(payload, encoding="utf-8")
-    OUT.with_name("megacap.js").write_text("window.__MEGACAP__ = " + payload + ";", encoding="utf-8")
     size_kb = OUT.stat().st_size // 1024
     print(f"완료: {len(stocks)}개 저장 → {OUT} ({size_kb}KB)" + (f" (실패: {failed})" if failed else ""))
 

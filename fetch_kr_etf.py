@@ -115,7 +115,6 @@ def main():
     out = {"updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST"), "etfs": etfs}
     payload = json.dumps(out, ensure_ascii=False)
     OUT.write_text(payload, encoding="utf-8")
-    OUT.with_name("kr_etf.js").write_text("window.__KR_ETF__ = " + payload + ";", encoding="utf-8")
     print(f"완료: {len(etfs)}개 저장 → {OUT}" + (f" (실패: {failed})" if failed else ""))
 
 

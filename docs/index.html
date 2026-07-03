@@ -157,7 +157,6 @@
   <div class="modal" id="modal"></div>
 </div>
 
-<script src="data.js"></script>
 <script src="theme.js"></script>
 <script src="capture.js"></script>
 <script>
@@ -521,10 +520,8 @@ function boot(d) {
   renderAll();
 }
 fetch("data.json?t=" + Date.now()).then(r => r.json()).then(boot).catch(() => {
-  // file:// 로 직접 열면 fetch가 막히므로 data.js 폴백 사용
-  if (window.__ETF_DATA__) boot(window.__ETF_DATA__);
-  else document.body.insertAdjacentHTML("beforeend",
-    `<p style="color:var(--clay)">데이터를 불러올 수 없습니다. <code>python3 fetch_data.py</code> 를 먼저 실행해 data.json/data.js를 생성하세요.</p>`);
+  document.body.insertAdjacentHTML("beforeend",
+    `<p style="color:var(--clay)">데이터를 불러올 수 없습니다.</p>`);
 });
 </script>
 </body>

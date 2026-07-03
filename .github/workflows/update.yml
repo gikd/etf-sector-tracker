@@ -35,7 +35,7 @@ jobs:
         run: |
           git config user.name "etf-bot"
           git config user.email "actions@github.com"
-          git add docs/data.json docs/data.js docs/megacap.json docs/megacap.js docs/kr_etf.json docs/kr_etf.js
+          git add docs/data.json docs/megacap.json docs/kr_etf.json
           if git diff --cached --quiet; then
             echo "변경 없음 — 커밋 생략"; exit 0
           fi

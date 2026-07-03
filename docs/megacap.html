@@ -94,7 +94,6 @@
 
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
 
-<script src="megacap.js"></script>
 <script src="theme.js"></script>
 <script src="capture.js"></script>
 <script>
@@ -309,9 +308,8 @@ function boot(d) {
 }
 const NOCACHE = "?t=" + Date.now();
 fetch("megacap.json" + NOCACHE).then(r => r.json()).then(boot).catch(() => {
-  if (window.__MEGACAP__) boot(window.__MEGACAP__);
-  else document.getElementById("board").innerHTML =
-    `<p style="color:var(--down)">데이터를 불러올 수 없습니다. python3 fetch_megacap.py 를 먼저 실행하세요.</p>`;
+  document.getElementById("board").innerHTML =
+    `<p style="color:var(--down)">데이터를 불러올 수 없습니다.</p>`;
 });
 fetch("commentary.json" + NOCACHE).then(r => r.json()).then(setCommentary).catch(() => {});
 </script>

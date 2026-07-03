@@ -298,12 +298,8 @@ def main():
     }
     payload = json.dumps(out, ensure_ascii=False)
     OUT.write_text(payload, encoding="utf-8")
-    # file:// 로 index.html을 직접 열어도 동작하도록 스크립트 형태로도 저장
-    OUT.with_name("data.js").write_text(
-        "window.__ETF_DATA__ = " + payload + ";", encoding="utf-8"
-    )
     size_kb = OUT.stat().st_size // 1024
-    print(f"완료: {len(etfs)}개 저장 → {OUT} (+data.js, {size_kb}KB)" + (f" (실패: {failed})" if failed else ""))
+    print(f"완료: {len(etfs)}개 저장 → {OUT} ({size_kb}KB)" + (f" (실패: {failed})" if failed else ""))
 
 
 if __name__ == "__main__":
