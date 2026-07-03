@@ -162,7 +162,8 @@ const BROAD_ETFS = new Set(["SPY", "ACWI", "EFA", "EEM", "VGK", "069500.KS", "22
 function relatedEtfs(t) {
   const shown = new Set([...(t.tickers || []), ...(t.kr || [])]);
   const th = themesOf((t.title || "") + " " + (t.summary || ""));
-  const out = [];
+  const out = [], seen = new Set();
+  // 1차: 대시보드 ETF 42개 — 보유종목 겹침(강한 근거) + 테마
   for (const e of ETF_CANDIDATES) {
     if (shown.has(e.ticker) || BROAD_ETFS.has(e.ticker)) continue;
     const holds = (e.holdings || []).map(h => h.ticker);
@@ -170,9 +171,26 @@ function relatedEtfs(t) {
     const et = etfTheme(e);
     const themed = et && th.has(et);
     const score = overlap.length * 2 + (themed ? 1 : 0);
-    if (score > 0) out.push({ e, score, overlap, et: themed ? et : null });
+    if (score > 0) { out.push({ e, score, overlap, et: themed ? et : null, amt: Infinity }); seen.add(e.ticker); }
   }
-  return out.sort((a, b) => b.score - a.score).slice(0, 6);
+  // 2차: 한국 상장 ETF 풀 전체(~370) — 이름·테마 키워드 매칭, 거래대금 순 랭킹
+  const pool = [];
+  for (const e of Object.values(STOCKS)) {
+    if (!e.is_etf || !e.ticker.endsWith(".KS")) continue;
+    if (shown.has(e.ticker) || seen.has(e.ticker) || BROAD_ETFS.has(e.ticker)) continue;
+    if (/레버리지|인버스/.test(e.name)) continue;   // 파생형 제외
+    const hits = [...themesOf(e.name + " " + (e.theme || ""))].filter(x => th.has(x));
+    if (hits.length) pool.push({ e, score: hits.length, overlap: [], et: hits[0], amt: e.amt || 0 });
+  }
+  // 비슷한 상품 도배 방지: 같은 테마는 거래대금 상위 2개까지만
+  pool.sort((a, b) => b.score - a.score || b.amt - a.amt);
+  const perTheme = {};
+  for (const r of pool) {
+    if ((perTheme[r.et] = (perTheme[r.et] || 0) + 1) <= 2) out.push(r);
+  }
+  return out.sort((a, b) =>
+    b.score - a.score || b.overlap.length - a.overlap.length || (b.amt || 0) - (a.amt || 0)
+  ).slice(0, 8);
 }
 function relCard(r) {
   const e = r.e;

@@ -77,7 +77,7 @@ def thesis_kr_tickers():
 
 
 def get_universe():
-    """네이버 ETF 전종목 → 거래대금 상위 TOP_N + 태제 참조분. [(sym.KS, name, theme)]."""
+    """네이버 ETF 전종목 → 거래대금 상위 TOP_N + 태제 참조분. [(sym.KS, name, theme, 거래대금)]."""
     try:
         req = urllib.request.Request(
             NAVER_ETF, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com/sise/etf.naver"})
@@ -93,10 +93,10 @@ def get_universe():
             if code not in picked and code in code_map:
                 picked[code] = code_map[code]
         print(f"네이버 ETF {len(items)}개 중 거래대금 상위 {TOP_N} + 태제참조 → 명단 {len(picked)}개")
-        return [(f'{c}.KS', x["itemname"], theme_for(x["itemname"])) for c, x in picked.items()]
+        return [(f'{c}.KS', x["itemname"], theme_for(x["itemname"]), (x.get("amonut") or 0)) for c, x in picked.items()]
     except Exception as e:
         print(f"  네이버 목록 실패({e}) → 폴백 명단 {len(FALLBACK)}개 사용")
-        return [(sym, name, theme_for(name)) for sym, name in FALLBACK]
+        return [(sym, name, theme_for(name), 0) for sym, name in FALLBACK]
 
 
 def pct(s, days):
@@ -114,7 +114,7 @@ def ytd_pct(dates, close):
 
 
 def fetch(row, retries=3):
-    sym, name, theme = row
+    sym, name, theme, amt = row
     for attempt in range(retries):
         try:
             raw = json.loads(http_get(API.format(t=sym)))
@@ -136,6 +136,7 @@ def fetch(row, retries=3):
             n = HIST_DAYS
             return {
                 "ticker": sym, "name": name, "theme": theme, "is_etf": True,
+                "amt": amt,  # 거래대금(백만원, 네이버) — 관련 ETF 랭킹용
                 "price": round(close[-1], 2), "ccy": meta.get("currency", "KRW"),
                 "r1d": pct(close, 1), "r1w": pct(close, 5), "r1m": pct(close, 21),
                 "r3m": pct(close, 63), "ytd": ytd_pct(dates, close),
