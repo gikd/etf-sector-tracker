@@ -25,8 +25,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: 데이터 수집
-        run: python3 fetch_data.py
       - name: 메가캡 수집
         run: python3 fetch_megacap.py
       - name: 한국 ETF 수집
@@ -35,7 +33,7 @@ jobs:
         run: |
           git config user.name "etf-bot"
           git config user.email "actions@github.com"
-          git add docs/data.json docs/megacap.json docs/kr_etf.json
+          git add docs/megacap.json docs/kr_etf.json
           if git diff --cached --quiet; then
             echo "변경 없음 — 커밋 생략"; exit 0
           fi

@@ -1,49 +1,41 @@
-# 글로벌 섹터 ETF 자금 흐름 트래커
+# 글로벌 메가캡 트래커
 
-글로벌 섹터·지역·테마 ETF 30종의 시세를 매일 수집해, **어느 섹터로 돈이 몰리는지**를 한눈에 보여주는 정적 대시보드.
+전 세계 시총 최상위 ~300종목을 직접 섹터 분류해, **어느 섹터로 돈이 쏠리는지 → 그 안에서 잘 가는 종목**을 보는 정적 대시보드. GitHub Pages + Actions 자동 갱신.
 
-## 작동 방식
+## 페이지 구성 (`docs/`)
+
+| 페이지 | 내용 | 데이터 |
+|---|---|---|
+| **index.html** (홈·글로벌 메가캡) | 섹터 강세 순위 + 섹터별 모멘텀 리더. 기간(1주~YTD)·범위(TOP100/300) 전환. 카드 클릭 = 일봉 캔들 + 수익률 + 뉴스 모달. | `megacap.json` + `commentary.json` |
+| **news.html** (뉴스플로우) | 시총 TOP300 종목 뉴스를 최신순 통합 피드로. 섹터(13)·종목 검색·TOP100/300 필터. | `megacap.json`(종목별 `news`) |
+| **perspective.html** (핵심 태제 트래킹) | 주차별 핵심 투자 태제 + 각 태제에 맞는 종목·한국 ETF. | `theses.json` + `kr_etf.json` |
+
+`megacap.html`은 옛 링크 보존용 `index.html` 리다이렉트 스텁.
+
+## 데이터 파이프라인
 
 ```
-fetch_data.py ──┬─ Yahoo Finance (1년치 일봉, OHLCV) ──▶ docs/data.json ──▶ docs/index.html (정적 대시보드)
-                └─ Google News RSS (섹터별 최근 7일 한국어 뉴스)
+fetch_universe.py ─▶ docs/megacap_universe.json  (시총 TOP300 명단, 주 1회)
+fetch_megacap.py  ─▶ docs/megacap.json           (가격·모멘텀·PER·뉴스, 매일)
+fetch_kr_etf.py   ─▶ docs/kr_etf.json            (한국 ETF 시세, 매일)
+megacap-sector-commentary 스킬 ─▶ docs/commentary.json · theses.json  (섹터 해석·태제, 매일/주차별)
 ```
 
-- **자금 유입 추정 방식**: 실제 펀드 설정/환매 데이터는 무료 API가 없으므로,
-  ① 기간별 수익률(모멘텀) ② 거래대금 급증률(5일 평균 ÷ 20일 평균)을 프록시로 사용.
-  "ACWI 대비 초과수익 + 거래대금 증가" 조합을 자금 유입 시그널로 표시.
-- **대시보드 구성**: finviz 스타일 성과 바차트, 누적 수익률 트렌드 라인차트(1M/3M/6M),
-  히트맵 카드, 비교표. 어디든 클릭하면 일봉 캔들차트(거래량 포함) + **대표 구성종목**(일간 등락순) + 관련 뉴스 모달이 열림.
-- **대표 종목**: ETF별 주요 종목 5~6개를 `CONSTITUENTS`에 정의해 시세를 함께 수집(중복 자동 제거).
-  한국 종목(.KS)은 원화(₩), 그 외는 달러($)로 표시.
-- 의존성 없음 (Python 표준 라이브러리만 사용), API 키 불필요.
-- 뉴스 검색어는 `fetch_data.py`의 `TICKERS` 4번째 필드에서 종목별로 조정 가능.
+- **2단 갱신**: 명단(`fetch_universe.py`, 주 1회)과 시세(`fetch_megacap.py`, 매일)를 분리. 후보군·섹터 분류는 `fetch_universe.py`의 `CANDIDATES`에서 편집.
+- **뉴스**: `fetch_megacap.py`가 종목별 Google News RSS(최근 7일)를 함께 수집해 `megacap.json`에 넣음. 뉴스플로우는 이걸 재사용(별도 파일 없음).
+- 한국 종목(.KS)은 원화(₩), 그 외는 달러($) 등 현지 통화로 표시.
+- 의존성 없음(Python 표준 라이브러리), API 키 불필요.
+
+## 자동 갱신 (GitHub Actions)
+
+- **`update.yml`** — 시세 갱신. `fetch_megacap.py` + `fetch_kr_etf.py` 실행 후 `megacap.json`·`kr_etf.json` 커밋(diff 가드: 실제 변경 시에만). 정시 실행은 Cloudflare Worker(`trigger/`)가 `workflow_dispatch`로 담당, GitHub 스케줄은 백업.
+- **`universe.yml`** — 일요일 시총 TOP300 명단 재산정 → `megacap_universe.json`.
 
 ## 로컬 실행
 
 ```bash
-python3 fetch_data.py          # docs/data.json 생성
-python3 -m http.server -d docs # http://localhost:8000 접속
+python3 fetch_universe.py       # docs/megacap_universe.json (명단, 최초 1회)
+python3 fetch_megacap.py        # docs/megacap.json (시세·뉴스)
+python3 fetch_kr_etf.py         # docs/kr_etf.json
+python3 -m http.server -d docs  # http://localhost:8000
 ```
-
-## 배포 (GitHub Pages + 일일 자동 갱신)
-
-1. GitHub 저장소 생성 후 푸시
-2. Settings → Pages → Source를 `main` 브랜치 `/docs` 폴더로 설정
-3. `.github/workflows/update.yml`이 평일 22:30 UTC(한국 오전 7:30, 미국 장 마감 후)에
-   자동으로 데이터를 갱신·커밋함
-
-## 글로벌 메가캡 (megacap.html)
-
-전 세계 시총 최상위 300종목을 직접 섹터 분류(13개)해, **섹터 강세 순위 + 섹터별 모멘텀 리더**를 봄.
-"자금 쏠림 → 강한 섹터의 강한 종목"을 포착하는 관측 도구. 기간(1주~YTD) 전환, 52주 신고가·저유동 배지.
-
-**2단 갱신 구조**:
-- **시세(매일)**: `fetch_megacap.py` — 명단을 읽어 가격·모멘텀만 일단위 갱신 (무인증 차트 API)
-- **명단(주 1회)**: `fetch_universe.py` — 후보군(~360) 시총을 Yahoo crumb 인증으로 받아 USD 환산·랭킹 → TOP300 → `megacap_universe.json`. 일요일 `universe.yml` 워크플로로 갱신.
-  후보군/섹터 분류는 `fetch_universe.py`의 `CANDIDATES`에서 편집.
-
-## 구성 변경
-
-추적할 ETF는 `fetch_data.py`의 `TICKERS` 목록에서 추가/삭제하면 됨 (티커, 한글명, 그룹).
-상대강도 기준 지수는 `BENCHMARK` 변수로 변경.
