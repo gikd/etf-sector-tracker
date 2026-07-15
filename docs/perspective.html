@@ -17,20 +17,6 @@
   .kr-label { font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--muted);
     text-transform:uppercase; margin:12px 0 7px; padding-top:11px; border-top:1px solid var(--line); }
 
-  /* 관련 ETF 자동매칭 */
-  .rel-label { font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--muted);
-    text-transform:uppercase; margin:14px 0 7px; padding-top:11px; border-top:1px dashed var(--line-strong); }
-  .rel-hint { text-transform:none; letter-spacing:0; opacity:.7; font-family:var(--sans); margin-left:6px; }
-  .rel-grid { display:grid; gap:7px; grid-template-columns:repeat(auto-fill,minmax(184px,1fr)); }
-  .rel-etf { background:var(--card); border:1px dashed var(--line-strong); border-radius:var(--card-radius);
-    padding:8px 11px; cursor:pointer; transition:border-color .12s, background .12s; }
-  .rel-etf:hover { background:var(--card-hover); border-color:var(--clay); }
-  .re-top { display:flex; justify-content:space-between; align-items:baseline; gap:6px; }
-  .re-nm { font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .re-ret { font-weight:700; font-size:12px; font-variant-numeric:tabular-nums; flex-shrink:0; }
-  .re-sub { font-size:10.5px; color:var(--muted); margin-top:3px; }
-  .re-mkt { font-family:var(--mono); }
-
   .src-link { color:var(--clay); font-weight:700; text-decoration:none; border-bottom:1px solid transparent; }
   .src-link:hover { border-bottom-color:var(--clay); }
 
@@ -118,93 +104,6 @@ function card(s) {
   </div>`;
 }
 
-/* ── 관련 ETF 자동매칭 (테마 키워드 + 보유종목 겹침) ─────────────── */
-let ETF_CANDIDATES = [];
-function indexDashEtfs(d) {   // data.json 의 ETF(미국 섹터·지역·테마 + 한국 섹터)를 후보로
-  if (!d || !d.etfs) return;
-  const dates = d.dates || [];
-  for (const e of d.etfs) {
-    const enriched = { ...e, is_etf: true, dates, ccy: e.group === "korea" ? "KRW" : "USD" };
-    ETF_CANDIDATES.push(enriched);
-    if (!STOCKS[e.ticker]) STOCKS[e.ticker] = enriched;   // 모달 클릭용(기존 데이터 우선)
-  }
-}
-const THEMES = [
-  ["반도체", ["반도체", "메모리", "HBM", "D램", "디램", "낸드", "파운드리", "웨이퍼"]],
-  ["AI·로봇", ["AI", "인공지능", "추론", "GPU", "LLM", "로봇", "휴머노이드", "피지컬", "자율"]],
-  ["소프트웨어", ["소프트웨어", "SaaS", "클라우드", "생태계", "개발자", "워크플로우"]],
-  ["바이오", ["바이오", "제약", "신약", "헬스케어"]],
-  ["방산", ["방산", "국방", "무기", "항공우주"]],
-  ["원자력·전력", ["원자력", "원전", "SMR", "전력", "송전"]],
-  ["2차전지", ["2차전지", "배터리", "전기차", "양극재", "음극재"]],
-  ["자동차", ["자동차", "완성차", "모빌리티"]],
-  ["조선", ["조선", "선박", "해양"]],
-  ["인터넷", ["인터넷", "이커머스", "광고"]],
-  ["금융", ["은행", "금융", "증권", "보험"]],
-];
-const ETF_THEME = {
-  "SMH": "반도체", "BOTZ": "AI·로봇", "IGV": "소프트웨어", "IBB": "바이오", "ITA": "방산", "URA": "원자력·전력", "KWEB": "인터넷",
-  "091160.KS": "반도체", "305720.KS": "2차전지", "364980.KS": "2차전지", "091180.KS": "자동차", "091170.KS": "금융",
-  "244580.KS": "바이오", "449450.KS": "방산", "466920.KS": "조선", "157500.KS": "인터넷", "442320.KS": "원자력·전력", "445290.KS": "AI·로봇",
-};
-function themesOf(text) {
-  const s = text || "";
-  return new Set(THEMES.filter(([k, kws]) => kws.some(w => s.includes(w))).map(([k]) => k));
-}
-function etfTheme(e) {
-  if (ETF_THEME[e.ticker]) return ETF_THEME[e.ticker];
-  const t = (e.name || "") + " " + (e.theme || "");
-  const m = THEMES.find(([k, kws]) => kws.some(w => t.includes(w)));
-  return m ? m[0] : null;
-}
-// 시장 벤치마크는 메가캡을 다 들고 있어 '보유 겹침'이 무의미 → 제외
-const BROAD_ETFS = new Set(["SPY", "ACWI", "EFA", "EEM", "VGK", "069500.KS", "229200.KS"]);
-function relatedEtfs(t) {
-  const shown = new Set([...(t.tickers || []), ...(t.kr || [])]);
-  const th = themesOf((t.title || "") + " " + (t.summary || ""));
-  const out = [], seen = new Set();
-  // 1차: 대시보드 ETF 42개 — 보유종목 겹침(강한 근거) + 테마
-  for (const e of ETF_CANDIDATES) {
-    if (shown.has(e.ticker) || BROAD_ETFS.has(e.ticker)) continue;
-    const holds = (e.holdings || []).map(h => h.ticker);
-    const overlap = (t.tickers || []).filter(tk => holds.includes(tk));
-    const et = etfTheme(e);
-    const themed = et && th.has(et);
-    const score = overlap.length * 2 + (themed ? 1 : 0);
-    if (score > 0) { out.push({ e, score, overlap, et: themed ? et : null, amt: Infinity }); seen.add(e.ticker); }
-  }
-  // 2차: 한국 상장 ETF 풀 전체(~370) — 이름·테마 키워드 매칭, 거래대금 순 랭킹
-  const pool = [];
-  for (const e of Object.values(STOCKS)) {
-    if (!e.is_etf || !e.ticker.endsWith(".KS")) continue;
-    if (shown.has(e.ticker) || seen.has(e.ticker) || BROAD_ETFS.has(e.ticker)) continue;
-    if (/레버리지|인버스/.test(e.name)) continue;   // 파생형 제외
-    const hits = [...themesOf(e.name + " " + (e.theme || ""))].filter(x => th.has(x));
-    if (hits.length) pool.push({ e, score: hits.length, overlap: [], et: hits[0], amt: e.amt || 0 });
-  }
-  // 비슷한 상품 도배 방지: 같은 테마는 거래대금 상위 2개까지만
-  pool.sort((a, b) => b.score - a.score || b.amt - a.amt);
-  const perTheme = {};
-  for (const r of pool) {
-    if ((perTheme[r.et] = (perTheme[r.et] || 0) + 1) <= 2) out.push(r);
-  }
-  return out.sort((a, b) =>
-    b.score - a.score || b.overlap.length - a.overlap.length || (b.amt || 0) - (a.amt || 0)
-  ).slice(0, 8);
-}
-function relCard(r) {
-  const e = r.e;
-  const why = r.overlap.length
-    ? "보유 " + r.overlap.slice(0, 2).map(tk => (STOCKS[tk] && STOCKS[tk].name) || tk.replace(".KS", "")).join("·") + (r.overlap.length > 2 ? " 외" : "")
-    : (r.et ? "테마 " + r.et : "");
-  const mkt = { us_sector: "미국 섹터", region: "지역 ETF", theme: "테마 ETF", korea: "한국 ETF" }[e.group]
-    || (e.ticker.endsWith(".KS") ? "한국 ETF" : "미국 ETF");
-  return `<div class="rel-etf" onclick="openModal('${e.ticker}')" title="${e.name}">
-    <div class="re-top"><span class="re-nm">${e.name}</span><span class="re-ret ${cls(e.r1w)}">${fmt(e.r1w)}</span></div>
-    <div class="re-sub"><span class="re-mkt">${mkt}</span> · ${why}</div>
-  </div>`;
-}
-
 function renderWeeks() {
   const ws = THESES.weeks || [];
   document.getElementById("weeks").innerHTML = ws.map((w, i) =>
@@ -226,16 +125,11 @@ function renderBoard() {
     const krCards = showKr ? (t.kr || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("") : "";
     const krBlock = krCards
       ? `<div class="kr-label">한국 ETF</div><div class="grid">${krCards}</div>` : "";
-    const rel = relatedEtfs(t);
-    const relBlock = rel.length
-      ? `<div class="rel-label">관련 ETF <span class="rel-hint">테마·구성종목 자동매칭</span></div>
-         <div class="rel-grid">${rel.map(relCard).join("")}</div>` : "";
     return `<section class="thesis">
       <div class="th-head"><span class="th-num">테제 ${i + 1}</span><h2>${t.title}</h2></div>
       <div class="th-summary">${t.summary}</div>
       <div class="grid">${cards || `<div style="color:var(--muted);font-size:13px">매칭 종목이 메가캡 명단(글로벌 TOP300)에 없습니다.</div>`}</div>
       ${krBlock}
-      ${relBlock}
     </section>`;
   }).join("");
 }
@@ -271,11 +165,10 @@ window.__rerender = function () {
   renderBoard();
   if (modalTicker && document.getElementById("modal-bg").classList.contains("open")) renderModal();
 };
-function boot(mega, theses, kr, dash) {
-  STOCKS = {}; ETF_CANDIDATES = [];
+function boot(mega, theses, kr) {
+  STOCKS = {};
   if (mega) { indexStocks(mega); PRICE_UPDATED = mega.updated || PRICE_UPDATED; }
   if (kr) indexEtfs(kr);
-  if (dash) indexDashEtfs(dash);
   THESES = theses;
   if (!THESES || !THESES.weeks) return;
   curWeek = 0;
@@ -286,8 +179,7 @@ Promise.all([
   fetch("megacap.json?t=" + Date.now()).then(r => r.json()),
   fetch("theses.json?t=" + Date.now()).then(r => r.json()),
   fetch("kr_etf.json?t=" + Date.now()).then(r => r.json()).catch(() => null),
-  fetch("data.json?t=" + Date.now()).then(r => r.json()).catch(() => null),
-]).then(([mega, theses, kr, dash]) => boot(mega, theses, kr, dash))
+]).then(([mega, theses, kr]) => boot(mega, theses, kr))
   .catch(() => { const b = document.getElementById("board"); if (b) b.innerHTML = `<p style="color:var(--down)">데이터를 불러올 수 없습니다.</p>`; });
 </script>
 </body>
