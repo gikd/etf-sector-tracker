@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>메가캡 뉴스플로우</title>
+<script>document.documentElement.className=(function(){try{return localStorage.getItem("etf-theme")||"theme-dark"}catch(e){return "theme-dark"}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=Nanum+Myeongjo:wght@400;700;800&family=Staatliches&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* 뉴스플로우 전용 (공통은 theme.css) */
+  .controls { display:flex; justify-content:space-between; align-items:center; gap:10px 16px; flex-wrap:wrap; margin-bottom:8px; }
+  .filters { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .sel, .search {
+    background:var(--btn-bg); border:1px solid var(--btn-border); color:var(--btn-color);
+    border-radius:var(--btn-radius); font:inherit; font-size:12.5px; padding:6px 10px; }
+  .search { min-width:180px; }
+  .sel:focus, .search:focus { outline:none; border-color:var(--clay); }
+  .count { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  .feed { border-top:1px solid var(--line); }
+  .nrow { display:flex; gap:16px; padding:14px 4px; border-bottom:1px solid var(--line); transition:background .1s; }
+  .nrow:hover { background:var(--card-hover); }
+  .n-left { width:78px; flex-shrink:0; display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+  .n-date { font-family:var(--mono); font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .n-tick { font-family:var(--mono); font-size:11.5px; font-weight:600; letter-spacing:.01em;
+    background:transparent; border:1px solid var(--line-strong); color:var(--ink); border-radius:5px;
+    padding:2px 6px; cursor:pointer; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .n-tick:hover { border-color:var(--clay); color:var(--clay); }
+  .n-main { flex:1; min-width:0; }
+  .n-title { font-size:15px; line-height:1.5; letter-spacing:-.01em; }
+  .n-title a { color:var(--ink); text-decoration:none; font-weight:600; }
+  .n-title a:hover { color:var(--clay); text-decoration:underline; }
+  .n-orig { font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.5; }
+  .n-src { font-size:11.5px; color:var(--muted); margin-top:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .n-sec { display:inline-block; font-size:10.5px; font-weight:600; color:var(--clay);
+    border:1px solid var(--line-strong); border-radius:4px; padding:1px 6px; }
+  .n-nm { color:var(--ink-soft); }
+  .n-dim { opacity:.5; }
+
+  .more { background:var(--btn-bg); border:1px solid var(--btn-border); color:var(--btn-color);
+    border-radius:var(--btn-radius); font:inherit; font-size:13px; font-weight:600; padding:9px 22px; cursor:pointer; margin:22px 0; }
+  .more:hover { border-color:var(--clay); color:var(--clay); }
+  .empty { color:var(--muted); padding:40px 0; text-align:center; }
+
+  @media (max-width:560px) {
+    .nrow { gap:12px; }
+    .n-left { width:60px; }
+    .search { min-width:130px; }
+  }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="index.html">글로벌 메가캡</a>
+  <a href="news.html" class="cur">뉴스플로우</a>
+  <a href="perspective.html">핵심 태제 트래킹</a>
+</div>
+<div class="kicker">메가캡 뉴스플로우 · 시총 TOP300</div>
+<header>
+  <h1>뉴스플로우</h1>
+  <span class="updated" id="updated"></span>
+</header>
+<p class="note">
+  글로벌 시총 TOP300 메가캡 종목 사이에서 나오는 뉴스를 <b>최신순</b>으로 모아 봅니다.
+  섹터·종목으로 좁혀 보고, 티커를 누르면 그 종목만, 제목을 누르면 원문으로. 관측용이며 투자 권유가 아닙니다.
+</p>
+
+<div class="controls">
+  <div class="filters">
+    <div class="tabs" id="range"></div>
+    <select class="sel" id="sector"></select>
+    <input class="search" id="search" type="search" placeholder="종목 검색 (이름·티커)" autocomplete="off">
+  </div>
+  <span class="count" id="count"></span>
+</div>
+
+<div class="feed" id="feed"></div>
+<div style="text-align:center"><button class="more" id="more" onclick="showMore()" hidden>더 보기</button></div>
+
+<footer>
+  데이터: Yahoo Finance / Google News · 1일 1회 갱신 · 최근 7일 · 시총 TOP300 메가캡 종목 기준.
+  뉴스는 종목별 자동 수집이며, 제목은 기계 번역이 섞일 수 있습니다.
+</footer>
+
+<script src="theme.js"></script>
+<script>
+const UNIVERSES = [100, 300];
+let universeN = 300;
+try { const _v = parseInt(localStorage.getItem("newsN"), 10); if (UNIVERSES.includes(_v)) universeN = _v; } catch (e) {}
+let ITEMS = [], SECTORS = [], sector = "", query = "", shown = 0;
+const PAGE = 80;
+const esc = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function renderRange() {
+  document.getElementById("range").innerHTML = UNIVERSES.map(n =>
+    `<button class="${n === universeN ? "active" : ""}" onclick="setRange(${n})">TOP ${n}</button>`).join("");
+}
+function setRange(n) { universeN = n; try { localStorage.setItem("newsN", n); } catch (e) {} reset(); }
+
+function renderSectors() {
+  document.getElementById("sector").innerHTML =
+    `<option value="">전체 섹터</option>` + SECTORS.map(s => `<option value="${esc(s)}"${s === sector ? " selected" : ""}>${esc(s)}</option>`).join("");
+}
+
+function filtered() {
+  const q = query.trim().toLowerCase();
+  return ITEMS.filter(it =>
+    it.rank <= universeN &&
+    (!sector || it.sector === sector) &&
+    (!q || it.name.toLowerCase().includes(q) || it.ticker.toLowerCase().includes(q)));
+}
+
+function row(it) {
+  const tk = it.ticker.replace(".KS", "").replace(".KQ", "");
+  return `<div class="nrow">
+    <div class="n-left">
+      <div class="n-date">${esc(it.d)}</div>
+      <button class="n-tick" onclick="pickTicker('${esc(it.ticker)}')" title="${esc(it.name)} · ${esc(it.sector)}">${esc(tk)}</button>
+    </div>
+    <div class="n-main">
+      <div class="n-title"><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a></div>
+      ${it.ot ? `<div class="n-orig">${esc(it.ot)}</div>` : ""}
+      <div class="n-src"><span class="n-sec">${esc(it.sector)}</span><span class="n-nm">${esc(it.name)}</span><span class="n-dim">· ${esc(it.s)} · ${esc(it.d)}</span></div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const f = filtered();
+  if (!shown) shown = PAGE;
+  const slice = f.slice(0, shown);
+  document.getElementById("feed").innerHTML = slice.length
+    ? slice.map(row).join("")
+    : `<div class="empty">조건에 맞는 뉴스가 없습니다.</div>`;
+  document.getElementById("count").textContent = `총 ${f.length.toLocaleString()}건`;
+  document.getElementById("more").hidden = shown >= f.length;
+}
+function reset() { shown = PAGE; renderRange(); renderSectors(); render(); }
+function showMore() { shown += PAGE; render(); }
+function pickTicker(t) {
+  const el = document.getElementById("search");
+  el.value = t.replace(".KS", "").replace(".KQ", "");
+  query = el.value; sector = ""; document.getElementById("sector").value = "";
+  reset(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.getElementById("sector").addEventListener("change", e => { sector = e.target.value; shown = PAGE; render(); });
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; shown = PAGE; render(); });
+
+function boot(d) {
+  const items = [];
+  for (const s of d.stocks) {
+    if (!s.news || !s.news.length) continue;
+    for (const nw of s.news)
+      items.push({ name: s.name, ticker: s.ticker, sector: s.sector, rank: s.rank || 9999, t: nw.t, ot: nw.ot, u: nw.u, s: nw.s, d: nw.d });
+  }
+  // 최신순: 날짜(MM-DD) 내림차순, 같은 날은 시총 상위 먼저
+  items.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0) || (a.rank - b.rank));
+  ITEMS = items;
+  SECTORS = [...new Set(d.stocks.map(s => s.sector))].sort();
+  document.getElementById("updated").textContent = `뉴스 ${d.updated} · TOP${d.count} · ${items.length.toLocaleString()}건`;
+  reset();
+}
+fetch("megacap.json?t=" + Date.now()).then(r => r.json()).then(boot).catch(() => {
+  document.getElementById("feed").innerHTML = `<div class="empty" style="color:var(--down)">데이터를 불러올 수 없습니다.</div>`;
+});
+</script>
+</body>
+</html>
