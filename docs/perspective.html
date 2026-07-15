@@ -85,6 +85,7 @@ const byTicker = t => STOCKS[t];
 // 주간복기 멤버 사이트 원문 URL — slug = "{YY}-{주차}" (예: 26년 25주차 → 26-25)
 const REVIEW_BASE = "https://weekly-review-z8c8.vercel.app/reviews";
 function reviewUrl(w) {
+  if (w.noreview) return null; // 주간복기 없는 주차(라이브 자료만) — 원문 링크 없음
   const wk = parseInt(String(w.week), 10);
   const yy = w.date ? w.date.slice(2, 4) : "";
   return (wk && yy) ? `${REVIEW_BASE}/${yy}-${wk}` : null;
@@ -119,7 +120,7 @@ function renderBoard() {
   document.getElementById("updated").innerHTML = `${w.week} 기준${PRICE_UPDATED ? " · 시세 " + PRICE_UPDATED : ""} · 출처: `
     + (url
       ? `<a class="src-link" href="${url}" target="_blank" rel="noopener">주간복기 ${w.week} 원문 보기 →</a>`
-      : `주간복기 ${w.week}`);
+      : (w.noreview ? `그 주 라이브 자료` : `주간복기 ${w.week}`));
   document.getElementById("board").innerHTML = (w.theses || []).map((t, i) => {
     const cards = (t.tickers || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("");
     const krCards = showKr ? (t.kr || []).map(tk => byTicker(tk)).filter(Boolean).map(card).join("") : "";
