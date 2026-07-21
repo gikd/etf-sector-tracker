@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>글로벌 메가캡 섹터 강세</title>
+<title>글로벌 메가캡</title>
 <script>document.documentElement.className=(function(){try{return localStorage.getItem("etf-theme")||"theme-dark"}catch(e){return "theme-dark"}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +17,7 @@
   .controls { display:flex; justify-content:space-between; align-items:center; gap:10px 16px; flex-wrap:wrap; }
   .uni-wrap { display:flex; align-items:center; gap:8px; }
   .uni-wrap .lbl { font-size:11.5px; color:var(--muted); letter-spacing:.02em; }
+  .ctrl-right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
 
   /* 섹터 강세 막대 */
   .bars { background:var(--card); border:1px solid var(--line); border-radius:var(--obj-radius); padding:12px 16px; }
@@ -66,23 +67,26 @@
 </div>
 <div class="kicker">글로벌 메가캡 · 시총 TOP300</div>
 <header>
-  <h1>글로벌 메가캡 섹터 강세</h1>
+  <h1>글로벌 메가캡</h1>
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
   전 세계 시총 최상위 ~300개(큰돈도 쉽게 거래 가능한 초대형주)를 직접 섹터 분류.
-  <b>어느 섹터로 돈이 쏠리는지</b>(섹터 강세 순위) → <b>그 안에서 잘 가는 종목</b>(모멘텀순)을 봅니다.
-  기간 버튼은 섹터 강세 순위·종목 정렬 기준(1일~YTD). 카드엔 <b>올해·내년 예상 PER</b>만 — 여러 종목 한눈에 밸류 비교용.
+  <b>보기</b> 전환: <b>섹터</b>(어느 섹터로 돈이 쏠리나 → 그 안의 리더) · <b>상대강도</b>(유니버스 전체에서 선택 기간 수익률 상위 종목 + 중앙값 대비 강도).
+  기간 버튼은 정렬 기준(1일~YTD, 상대강도는 기본 1개월). 카드엔 <b>올해·내년 예상 PER</b>.
   <b>카드 클릭 = 일봉 차트 + 수익률 + 뉴스 상세.</b> 관측용이며 투자 권유가 아닙니다.
 </p>
 
 <div class="controls">
   <div class="periods" id="periods"></div>
-  <div class="uni-wrap"><span class="lbl">범위</span><div class="tabs" id="universe"></div></div>
+  <div class="ctrl-right">
+    <div class="uni-wrap"><span class="lbl">보기</span><div class="tabs" id="mode"></div></div>
+    <div class="uni-wrap"><span class="lbl">범위</span><div class="tabs" id="universe"></div></div>
+  </div>
 </div>
 
-<h2>섹터 강세 순위</h2>
-<div class="h2-sub">섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동</div>
+<h2 id="section-title">섹터 강세 순위</h2>
+<div class="h2-sub" id="section-sub">섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동</div>
 <div class="bars" id="bars"></div>
 
 <div id="board"></div>
@@ -103,6 +107,10 @@ const PERIODS = [
   { key: "r3m", label: "3개월" }, { key: "ytd", label: "연초이후" },
 ];
 let DATA = null, period = "r1w";
+const MODES = [{ key: "sector", label: "섹터" }, { key: "rs", label: "상대강도" }];
+let mode = "sector";
+try { const _m = localStorage.getItem("megacapMode"); if (_m === "rs" || _m === "sector") mode = _m; } catch (e) {}
+if (mode === "rs") period = "r1m";
 const UNIVERSES = [100, 300];
 let universeN = 300;
 try { const _v = parseInt(localStorage.getItem("megacapN"), 10); if (UNIVERSES.includes(_v)) universeN = _v; } catch (e) {}
@@ -137,6 +145,36 @@ function renderUniverse() {
     `<button class="${n === universeN ? "active" : ""}" onclick="setUniverse(${n})">TOP ${n}</button>`).join("");
 }
 function setUniverse(n) { universeN = n; try { localStorage.setItem("megacapN", n); } catch (e) {} renderAll(); }
+
+function renderMode() {
+  document.getElementById("mode").innerHTML = MODES.map(m =>
+    `<button class="${m.key === mode ? "active" : ""}" onclick="setMode('${m.key}')">${m.label}</button>`).join("");
+}
+function setMode(m) {
+  mode = m; try { localStorage.setItem("megacapMode", m); } catch (e) {}
+  if (m === "rs") period = "r1m";
+  renderAll();
+}
+function periodLabel() { const p = PERIODS.find(x => x.key === period); return p ? p.label : ""; }
+
+/* 상대강도 리더: 유니버스 전체를 선택 기간 수익률순으로. 카드의 '중앙값 대비' = 유니버스 대비 상대강도 */
+function renderLeaders() {
+  const all = DATA.stocks.filter(s => !(s.rank != null && s.rank > universeN));
+  const med = median(all.map(s => s[period]));
+  const sorted = [...all].sort((a, b) => (b[period] ?? -999) - (a[period] ?? -999));
+  document.getElementById("board").innerHTML =
+    `<div class="grid">${sorted.map((s, i) => rsCard(s, i + 1, med)).join("")}</div>`;
+}
+function rsCard(s, rankNum, med) {
+  const v = s[period], delta = (v != null && med != null) ? v - med : null;
+  return `<div class="card ${rankNum <= 3 && (v ?? -999) > 0 ? "lead" : ""}" onclick="openModal('${s.ticker}')">
+    <div class="c-top"><span class="nm">${s.name}</span><span class="today ${cls(v)}">${fmt(v)}</span></div>
+    <div class="tk">#${rankNum} · ${s.sector}${s.rank ? ` · 시총 ${s.rank}위` : ""}${s.lowliq ? " · 저유동" : ""}</div>
+    ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
+    <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
+    <div class="c-per"><span class="pl">중앙값 대비</span> <span class="${cls(delta)}" style="font-weight:600">${fmt(delta)}</span></div>
+  </div>`;
+}
 
 function renderBars() {
   const secs = sectors();
@@ -186,7 +224,28 @@ function renderBoard() {
   }).join("");
 }
 
-function renderAll() { renderPeriods(); renderUniverse(); renderBars(); renderBoard(); }
+/* chrome(토글·헤더·막대 표시)만 세팅 — DATA 불필요. 데이터 오기 전에도 현재 모드를 반영 */
+function applyChrome() {
+  renderPeriods(); renderMode(); renderUniverse();
+  const bars = document.getElementById("bars");
+  const title = document.getElementById("section-title");
+  const sub = document.getElementById("section-sub");
+  if (mode === "rs") {
+    title.textContent = `상대강도 리더 · ${periodLabel()}`;
+    sub.textContent = `${periodLabel()} 수익률 상위순 · 카드의 '중앙값 대비'가 유니버스(TOP${universeN}) 대비 상대강도`;
+    bars.style.display = "none";
+  } else {
+    title.textContent = "섹터 강세 순위";
+    sub.textContent = "섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동";
+    bars.style.display = "";
+  }
+}
+function renderAll() {
+  applyChrome();
+  if (!DATA) return;                  // 데이터 전엔 chrome만 (rs 복원 시 섹터 헤더/빈 막대 깜빡임 방지)
+  if (mode === "rs") renderLeaders();
+  else { renderBars(); renderBoard(); }
+}
 // 테마 토글 시 차트 색이 변수로 따라오지만, 안전하게 다시 그린다
 window.__rerender = function () {
   if (!DATA) return;
@@ -202,7 +261,7 @@ function setCommentary(c) {
   // 신구조: {daily:{sectors},weekly:{sectors}} / 구버전 호환: {sectors}(=weekly)
   ((c.daily && c.daily.sectors) || []).forEach(s => { COMMENTARY_DAILY[s.sector] = s; });
   ((c.weekly && c.weekly.sectors) || c.sectors || []).forEach(s => { COMMENTARY_WEEKLY[s.sector] = s; });
-  if (DATA) renderBoard();
+  if (DATA) renderAll();   // mode-aware: rs 모드에선 RS 그리드가 섹터 뷰로 덮이지 않게
 }
 
 function renderModal() {
@@ -238,6 +297,7 @@ function boot(d) {
   document.getElementById("updated").textContent = `시세 ${d.updated} · ${d.count}종목${uni}`;
   renderAll();
 }
+applyChrome();   // 데이터 도착 전 초기 chrome — rs 복원 시 섹터 헤더/빈 막대 노출 방지
 const NOCACHE = "?t=" + Date.now();
 fetch("megacap.json" + NOCACHE).then(r => r.json()).then(boot).catch(() => {
   document.getElementById("board").innerHTML =
