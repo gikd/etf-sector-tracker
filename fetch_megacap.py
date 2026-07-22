@@ -6,6 +6,7 @@
 docs/megacap.json 생성.
 """
 import json
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -15,13 +16,54 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 HIST_DAYS = 130
-NEWS_PER = 5
 API = "https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=1y&interval=1d"
 NEWS_RSS = "https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
 TRANSLATE = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q={q}"
 DOCS = Path(__file__).parent / "docs"
 UNIVERSE = DOCS / "megacap_universe.json"
 OUT = DOCS / "megacap.json"
+
+# ── 뉴스 선별(중도): 대형 언론·공식 릴리스는 채택 / 애그리게이터·SEO는 차단 /
+#    그 외(중간 출처)는 실적·M&A·소송 등 중대 이벤트일 때만 구제. 정크 헤드라인·근접중복 제거. 종목당 NEWS_KEEP개. ──
+NEWS_KEEP = 3
+ALLOW_SRC = [
+    "bloomberg", "reuters", "wall street journal", "wsj", "financial times", "cnbc",
+    "yahoo finance", "barron", "marketwatch", "the information", "nikkei", "associated press",
+    "ap news", "apnews", "axios", "economist", "fortune", "forbes", "business insider",
+    "seeking alpha", "globe and mail", "financial post", "the guardian", "new york times",
+    "nytimes", "washington post", "cnn", "quartz", "techcrunch", "the verge", "ars technica",
+    "wired", "tom's hardware", "the register", "semianalysis",
+    "pr newswire", "prnewswire", "business wire", "businesswire", "globe newswire", "globenewswire",
+    "yonhap", "연합", "한국경제", "hankyung", "매일경제", "mk.co", "조선", "chosun", "전자신문",
+    "etnews", "서울경제", "sedaily", "아시아경제", "asiae", "이데일리", "edaily", "머니투데이",
+    "mt.co", "중앙", "joongang", "파이낸셜뉴스", "news1", "뉴스1", "헤럴드", "heraldcorp",
+    "디지털데일리", "ddaily", "zdnet", "지디넷", "블로터", "bloter", "더구루", "theguru",
+]
+BLOCK_SRC = [
+    "marketbeat", "ad-hoc-news", "tradingview", "marketscreener", "gurufocus", "guru focus",
+    "moomoo", "msn", "openpr", "stock titan", "stocktitan", "kalkine", "traders union",
+    "tradersunion", "investing.com", "indexbox", "simplywall", "simply wall", "barchart",
+    "quiver", "scanx", "biggo", "tikr", "zacks", "insider monkey", "benzinga", "24/7 wall",
+    "defense world", "defenseworld", "americanbankingnews", "cerbat", "wkrb", "ledger gazette",
+    "etf daily", "modern readers", "mayfield recorder", "invezz", "fintel", "stocknews",
+    "wallmine", "stockstory", "the markets daily", "motley fool",
+]
+MATERIAL_RE = re.compile(
+    r"earnings|quarterly (results|profit|revenue)|q[1-4] (results|earnings)|beats?|misses?|"
+    r"guidance|acqui|buyout|takeover|merger|merges|\bstake\b|investment|lawsuit|\bsues\b|\bsued\b|"
+    r"settlement|antitrust|investigation|\bfined\b|\bcontract\b|awarded|wins (deal|order|contract|bid|approval)|"
+    r"partners? with|recall|approval|approved|\bfda\b|bankruptcy|layoff|job cuts|steps down|resign|"
+    r"appoints|names new|buyback|repurchase|dividend|stock split|\bipo\b|spin-?off|delist|"
+    r"data breach|\bbreach\b|outage|sanction|tariff|export control", re.I)
+JUNK_RE = re.compile(
+    r"\b\d+\s+(reasons|things|stocks|top|best|no-brainer|magnificent|high-yield|analysts)|"
+    r"should you (buy|sell)|\bis\b.{0,30}\ba (buy|sell|good stock)|better buy|best (ai )?stock|"
+    r"price target|\bpt\b (raised|lowered|to)|raises .{0,20}target|cuts .{0,20}target|"
+    r"initiates coverage|reiterates|cramer|motley fool|zacks|"
+    r"insider (buying|selling|sells|buys|bought|sold)|"
+    r"1 (magnificent|no-brainer|top|growth|incredible|ai) stock|here's why.{0,40}(buy|sell)|"
+    r"trending stock|facts to know|rationale for (adding|buying)|what to know before|"
+    r"beyond why|here is what to know|is a trending", re.I)
 
 
 def load_members():
@@ -104,8 +146,42 @@ def news_query(member):
     return member["ticker"].split(".")[0]
 
 
+def _src_tier(src):
+    s = (src or "").lower()
+    if any(k in s for k in BLOCK_SRC):
+        return "block"
+    if any(k in s for k in ALLOW_SRC):
+        return "allow"
+    return "mid"
+
+
+def _norm_tokens(t):
+    return set(re.sub(r"[^a-z0-9가-힣]+", " ", (t or "").lower()).split())
+
+
+def curate_news(items):
+    """중도 선별: 차단 출처 제거 · 정크 헤드라인 제거 · 중간 출처는 중대 이벤트만 · 근접 중복 제거.
+    items 의 t 는 (번역 전) 영문 헤드라인이라는 전제."""
+    kept, seen = [], []
+    for it in items:
+        title = it.get("t", "")
+        tier = _src_tier(it.get("s", ""))
+        if tier == "block":
+            continue
+        if JUNK_RE.search(title):
+            continue
+        if tier == "mid" and not MATERIAL_RE.search(title):
+            continue
+        toks = _norm_tokens(title)
+        if toks and any(len(toks & p) / len(toks | p) >= 0.7 for p in seen):
+            continue  # 근접 중복(자카드 ≥ 0.7)
+        seen.append(toks)
+        kept.append(it)
+    return kept
+
+
 def fetch_news(query):
-    """영문 글로벌 뉴스(최근 7일) — 글로벌 회사이므로 외국 뉴스 우선."""
+    """영문 글로벌 뉴스(최근 7일) — 글로벌 회사이므로 외국 뉴스 우선. 중도 선별 후 상위 NEWS_KEEP개."""
     q = query.strip()
     try:
         url = NEWS_RSS.format(q=urllib.parse.quote(f"{q} when:7d"))
@@ -125,7 +201,7 @@ def fetch_news(query):
         items.sort(key=lambda x: x["_dt"], reverse=True)
         for x in items:
             del x["_dt"]
-        return items[:NEWS_PER]
+        return curate_news(items)[:NEWS_KEEP]
     except Exception:
         return []
 
