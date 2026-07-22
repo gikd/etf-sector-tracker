@@ -54,9 +54,10 @@ function candleSVG(s, win) {
 }
 
 /* 관련 뉴스 블록 */
+const _esc = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function newsHTML(s) {
   return `<div class="news"><h4>관련 뉴스 (최근 7일)</h4>
-    <ul>${s.news && s.news.length ? s.news.map(nw => `<li><a href="${nw.u}" target="_blank" rel="noopener" title="${(nw.ot || "").replace(/"/g, "&quot;")}">${nw.t}</a>${nw.ot ? `<div class="orig">${nw.ot}</div>` : ""}<span class="src">${nw.s} · ${nw.d}</span></li>`).join("") : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>
+    <ul>${s.news && s.news.length ? s.news.map(nw => `<li><a href="${_esc(nw.u)}" target="_blank" rel="noopener" title="${_esc(nw.ot)}">${_esc(nw.t)}</a>${nw.ot ? `<div class="orig">${_esc(nw.ot)}</div>` : ""}<span class="src">${_esc(nw.s)} · ${_esc(nw.d)}</span></li>`).join("") : `<li style="color:var(--muted)">최근 뉴스가 없습니다.</li>`}</ul>
   </div>`;
 }
 

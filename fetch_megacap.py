@@ -41,29 +41,38 @@ ALLOW_SRC = [
 ]
 BLOCK_SRC = [
     "marketbeat", "ad-hoc-news", "tradingview", "marketscreener", "gurufocus", "guru focus",
-    "moomoo", "msn", "openpr", "stock titan", "stocktitan", "kalkine", "traders union",
+    "moomoo", "openpr", "stock titan", "stocktitan", "kalkine", "traders union",
     "tradersunion", "investing.com", "indexbox", "simplywall", "simply wall", "barchart",
-    "quiver", "scanx", "biggo", "tikr", "zacks", "insider monkey", "benzinga", "24/7 wall",
+    "quiver", "scanx", "biggo", "tikr", "tipranks", "zacks", "insider monkey", "benzinga", "24/7 wall",
     "defense world", "defenseworld", "americanbankingnews", "cerbat", "wkrb", "ledger gazette",
     "etf daily", "modern readers", "mayfield recorder", "invezz", "fintel", "stocknews",
     "wallmine", "stockstory", "the markets daily", "motley fool",
 ]
+BLOCK_WORD = ["msn"]  # 단어경계 매칭 — 'MSNBC'(정상 매체)를 MSN 애그리게이터로 오차단하지 않게
+_BLOCK_WORD_RE = re.compile(r"\b(" + "|".join(BLOCK_WORD) + r")\b", re.I)
 MATERIAL_RE = re.compile(
-    r"earnings|quarterly (results|profit|revenue)|q[1-4] (results|earnings)|beats?|misses?|"
-    r"guidance|acqui|buyout|takeover|merger|merges|\bstake\b|investment|lawsuit|\bsues\b|\bsued\b|"
-    r"settlement|antitrust|investigation|\bfined\b|\bcontract\b|awarded|wins (deal|order|contract|bid|approval)|"
-    r"partners? with|recall|approval|approved|\bfda\b|bankruptcy|layoff|job cuts|steps down|resign|"
-    r"appoints|names new|buyback|repurchase|dividend|stock split|\bipo\b|spin-?off|delist|"
-    r"data breach|\bbreach\b|outage|sanction|tariff|export control", re.I)
-JUNK_RE = re.compile(
+    r"earnings|quarterly (results|profit|revenue)|q[1-4] (results|earnings)|"
+    r"beats?\s+(estimates|expectations|forecasts?|the street|views)|"
+    r"misses?\s+(estimates|expectations|forecasts?|views)|"
+    r"guidance|acqui|buyout|takeover|merger|\bmerges?\b|\bstake\b|invests? \$|investment of \$|"
+    r"lawsuit|\bsues\b|\bsued\b|settlement|antitrust|investigation|\bfined\b|\bcontract\b|awarded|"
+    r"wins (deal|order|contract|bid|approval)|partners? with|recall|approval|approved|\bfda\b|"
+    r"bankruptcy|\blayoffs?\b|job cuts|steps down|resign|\bappoints?\b|names new|buyback|repurchase|"
+    r"dividend|stock split|\bipo\b|spin-?off|delist|data breach|\bbreach\b|outage|sanction|tariff|"
+    r"export control", re.I)
+# 순수 노이즈(리스티클·매수의견 클릭베이트): 어느 출처든 제거
+HARD_JUNK_RE = re.compile(
     r"\b\d+\s+(reasons|things|stocks|top|best|no-brainer|magnificent|high-yield|analysts)|"
-    r"should you (buy|sell)|\bis\b.{0,30}\ba (buy|sell|good stock)|better buy|best (ai )?stock|"
-    r"price target|\bpt\b (raised|lowered|to)|raises .{0,20}target|cuts .{0,20}target|"
-    r"initiates coverage|reiterates|cramer|motley fool|zacks|"
-    r"insider (buying|selling|sells|buys|bought|sold)|"
+    r"should you (buy|sell)|\bis\b.{0,30}\ba (buy|sell|good stock)\b|better buy|best (ai )?stock|"
+    r"cramer|motley fool|zacks|insider (buying|selling|sells|buys|bought|sold)|"
     r"1 (magnificent|no-brainer|top|growth|incredible|ai) stock|here's why.{0,40}(buy|sell)|"
     r"trending stock|facts to know|rationale for (adding|buying)|what to know before|"
     r"beyond why|here is what to know|is a trending", re.I)
+# 브로커 기계뉴스(목표주가·투자의견): 중대 이벤트와 겹칠 수 있어 material 이면 살린다(curate_news 참조)
+SOFT_JUNK_RE = re.compile(
+    r"price target|\bpt\b (raised|lowered|to|of)|"
+    r"(raises|lowers|cuts|boosts|lifts) (its |their )?(price[ -]?target|pt)|"
+    r"initiates coverage|reiterates|maintains (a )?(buy|hold|sell|neutral|overweight|underweight)", re.I)
 
 
 def load_members():
@@ -148,7 +157,7 @@ def news_query(member):
 
 def _src_tier(src):
     s = (src or "").lower()
-    if any(k in s for k in BLOCK_SRC):
+    if any(k in s for k in BLOCK_SRC) or _BLOCK_WORD_RE.search(s):
         return "block"
     if any(k in s for k in ALLOW_SRC):
         return "allow"
@@ -160,22 +169,34 @@ def _norm_tokens(t):
 
 
 def curate_news(items):
-    """중도 선별: 차단 출처 제거 · 정크 헤드라인 제거 · 중간 출처는 중대 이벤트만 · 근접 중복 제거.
-    items 의 t 는 (번역 전) 영문 헤드라인이라는 전제."""
-    kept, seen = [], []
+    """중도 선별(items 의 t 는 번역 전 영문 헤드라인 전제):
+    차단 출처 제거 · 순수 정크(HARD) 제거 · 브로커 기계뉴스(SOFT)는 중대 이벤트 아닐 때만 제거 ·
+    중간 출처는 중대 이벤트만 구제 · 근접 중복 제거."""
+    kept, seen_tok, seen_str = [], [], set()
     for it in items:
         title = it.get("t", "")
         tier = _src_tier(it.get("s", ""))
         if tier == "block":
             continue
-        if JUNK_RE.search(title):
+        if HARD_JUNK_RE.search(title):
             continue
-        if tier == "mid" and not MATERIAL_RE.search(title):
+        material = bool(MATERIAL_RE.search(title))
+        if SOFT_JUNK_RE.search(title) and not material:
+            continue
+        if tier == "mid" and not material:
             continue
         toks = _norm_tokens(title)
-        if toks and any(len(toks & p) / len(toks | p) >= 0.7 for p in seen):
-            continue  # 근접 중복(자카드 ≥ 0.7)
-        seen.append(toks)
+        if toks:
+            if any(len(toks & p) / len(toks | p) >= 0.7 for p in seen_tok):
+                continue  # 근접 중복(자카드 ≥ 0.7)
+            seen_tok.append(toks)
+        else:  # 비라틴/기호만 제목 → 글자·숫자가 없으면(공백·기호만) 드롭, 있으면(CJK 등) 전체문자열로 중복 처리
+            if not re.sub(r"[\W_]+", "", title):  # 모든 스크립트의 글자/숫자만 남긴 게 비면 드롭
+                continue
+            norm = re.sub(r"\s+", " ", title.strip().lower())
+            if norm in seen_str:
+                continue
+            seen_str.add(norm)
         kept.append(it)
     return kept
 
