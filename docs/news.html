@@ -89,7 +89,7 @@
 <script src="theme.js"></script>
 <script>
 const UNIVERSES = [100, 300];
-let universeN = 300;
+let universeN = 100;   // 기본은 시총 TOP100 — 읽을 수 있는 분량으로. 토글로 300까지 확장
 try { const _v = parseInt(localStorage.getItem("newsN"), 10); if (UNIVERSES.includes(_v)) universeN = _v; } catch (e) {}
 let ITEMS = [], SECTORS = [], sector = "", query = "", shown = 0;
 const PAGE = 80;

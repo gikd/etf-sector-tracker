@@ -25,7 +25,7 @@ OUT = DOCS / "megacap.json"
 
 # ── 뉴스 선별(중도): 대형 언론·공식 릴리스는 채택 / 애그리게이터·SEO는 차단 /
 #    그 외(중간 출처)는 실적·M&A·소송 등 중대 이벤트일 때만 구제. 정크 헤드라인·근접중복 제거. 종목당 NEWS_KEEP개. ──
-NEWS_KEEP = 3
+NEWS_KEEP = 2
 ALLOW_SRC = [
     "bloomberg", "reuters", "wall street journal", "wsj", "financial times", "cnbc",
     "yahoo finance", "barron", "marketwatch", "the information", "nikkei", "associated press",
@@ -50,16 +50,31 @@ BLOCK_SRC = [
 ]
 BLOCK_WORD = ["msn"]  # 단어경계 매칭 — 'MSNBC'(정상 매체)를 MSN 애그리게이터로 오차단하지 않게
 _BLOCK_WORD_RE = re.compile(r"\b(" + "|".join(BLOCK_WORD) + r")\b", re.I)
-MATERIAL_RE = re.compile(
-    r"earnings|quarterly (results|profit|revenue)|q[1-4] (results|earnings)|"
-    r"beats?\s+(estimates|expectations|forecasts?|the street|views)|"
-    r"misses?\s+(estimates|expectations|forecasts?|views)|"
-    r"guidance|acqui|buyout|takeover|merger|\bmerges?\b|\bstake\b|invests? \$|investment of \$|"
-    r"lawsuit|\bsues\b|\bsued\b|settlement|antitrust|investigation|\bfined\b|\bcontract\b|awarded|"
-    r"wins (deal|order|contract|bid|approval)|partners? with|recall|approval|approved|\bfda\b|"
-    r"bankruptcy|\blayoffs?\b|job cuts|steps down|resign|\bappoints?\b|names new|buyback|repurchase|"
-    r"dividend|stock split|\bipo\b|spin-?off|delist|data breach|\bbreach\b|outage|sanction|tariff|"
-    r"export control", re.I)
+# 산업적으로 의미 있는 사건만 통과(주가 등락·실적 코멘터리·투자의견은 산업 사건이 아니다)
+INDUSTRY_RE = re.compile(
+    # 제품·기술
+    r"unveil|launch|debut|introduc(e|es|ing)|next-?gen|breakthrough|mass production|"
+    r"begins production|rolls? out|tape-?out|prototype|"
+    # 설비·증설·자본투입
+    r"\bfab\b|foundry|gigafactory|\bplant\b|factory|expands?|"
+    r"(production|manufacturing|chip|memory|fab) capacity|capacity (expansion|increase|boost)|"
+    r"data ?cent(er|re)|invests? \$|investment of \$|"
+    # M&A·지분·구조
+    r"acqui(re|res|red|sition)|merger|\bmerges?\b|takeover|buyout|\bstake\b|joint venture|"
+    r"spin-?off|divest|delist|new (business )?(division|unit)|establishes|"
+    r"sets up (a |the )?(new )?(unit|division|plant|factory|joint venture|subsidiary|business)|"
+    # 계약·수주·제휴
+    r"\bcontract\b|supply (deal|agreement|contract)|wins (deal|order|contract|bid)|awarded|"
+    r"partners? with|partnership|teams? up with|agreement with|"
+    # 규제·법·정책
+    r"antitrust|lawsuit|\bsues\b|\bsued\b|settlement|investigation|\bprobe\b|\bfined\b|regulator|"
+    r"\bbans?\b|banned|sanction|tariff|export control|subsidy|approval|approves?|approved|\bfda\b|"
+    # 공급망·생산·보안
+    r"shortage|supply chain|production (cut|halt|delay|boost|increase)|recall|outage|disrupt|"
+    r"data breach|\bbreach\b|"
+    # 조직·인사
+    r"steps down|resigns?|\bappoints?\b|names new|\blayoffs?\b|job cuts|"
+    r"restructuring|bankruptcy", re.I)
 # 순수 노이즈(리스티클·매수의견 클릭베이트): 어느 출처든 제거
 HARD_JUNK_RE = re.compile(
     r"\b\d+\s+(reasons|things|stocks|top|best|no-brainer|magnificent|high-yield|analysts)|"
@@ -67,12 +82,27 @@ HARD_JUNK_RE = re.compile(
     r"cramer|motley fool|zacks|insider (buying|selling|sells|buys|bought|sold)|"
     r"1 (magnificent|no-brainer|top|growth|incredible|ai) stock|here's why.{0,40}(buy|sell)|"
     r"trending stock|facts to know|rationale for (adding|buying)|what to know before|"
-    r"beyond why|here is what to know|is a trending", re.I)
-# 브로커 기계뉴스(목표주가·투자의견): 중대 이벤트와 겹칠 수 있어 material 이면 살린다(curate_news 참조)
-SOFT_JUNK_RE = re.compile(
+    r"beyond why|here is what to know|is a trending|"
+    # 애널리스트·투자의견·밸류에이션(사용자 관심 밖)
     r"price target|\bpt\b (raised|lowered|to|of)|"
     r"(raises|lowers|cuts|boosts|lifts) (its |their )?(price[ -]?target|pt)|"
-    r"initiates coverage|reiterates|maintains (a )?(buy|hold|sell|neutral|overweight|underweight)", re.I)
+    r"initiates coverage|reiterates|maintains (a )?(buy|hold|sell|neutral|overweight|underweight)|"
+    r"\b(upgrade|downgrade)[sd]?\b|\branalyst|outperform|underperform|overweight|underweight|"
+    r"valuation|undervalued|overvalued|\bp/e\b|"
+    # 시장색·주가 등락 기사
+    r"what to watch|stocks? to watch|top (gainers|losers)|movers|52-?week|premarket|after-?hours|"
+    r"shares? (rise|rises|fell|fall|falls|jump|jumps|slip|slips|surge|surges|tumble|tumbles|drop|drops|"
+    r"climb|climbs|sink|sinks|soar|soars|gain|gains|plunge|plunges|rally|rallies)|"
+    r"stock (rises|falls|jumps|surges|slips|drops|soars|sinks|plunges|climbs|hits|moves|forecast|analysis)|"
+    r"buyback|repurchase|dividend|stock split|"
+    # 로펌 소송모집 스팸(PR와이어로 대량 유입)
+    r"shareholder alert|class action|securities fraud|lead plaintiff|deadline reminder|"
+    r"investors? (have opportunity|who lost|with losses|encouraged)|law offices|"
+    r"rosen law|pomerantz|bragar|levi & korsinsky|schall law|glancy prongay|"
+    # 오피니언·백과사전·가정형
+    r"if you'?d invested|had you invested|a bargain|worth buying|margin expansion|"
+    r"\bbritannica\b|encyclopedia|"
+    r"^(will|is|are|should|can|could|why)\b.{0,90}\?", re.I)
 
 
 def load_members():
@@ -169,21 +199,17 @@ def _norm_tokens(t):
 
 
 def curate_news(items):
-    """중도 선별(items 의 t 는 번역 전 영문 헤드라인 전제):
-    차단 출처 제거 · 순수 정크(HARD) 제거 · 브로커 기계뉴스(SOFT)는 중대 이벤트 아닐 때만 제거 ·
-    중간 출처는 중대 이벤트만 구제 · 근접 중복 제거."""
+    """산업 이벤트 선별(items 의 t 는 번역 전 영문 헤드라인 전제):
+    차단 출처 제거 · 정크/애널리스트/시장색 기사 제거 · **모든 출처에 산업 이벤트를 요구** ·
+    근접 중복 제거. (주가 등락·투자의견·실적 코멘터리는 산업 사건이 아니므로 제외)"""
     kept, seen_tok, seen_str = [], [], set()
     for it in items:
         title = it.get("t", "")
-        tier = _src_tier(it.get("s", ""))
-        if tier == "block":
+        if _src_tier(it.get("s", "")) == "block":
             continue
         if HARD_JUNK_RE.search(title):
             continue
-        material = bool(MATERIAL_RE.search(title))
-        if SOFT_JUNK_RE.search(title) and not material:
-            continue
-        if tier == "mid" and not material:
+        if not INDUSTRY_RE.search(title):
             continue
         toks = _norm_tokens(title)
         if toks:
