@@ -21,6 +21,18 @@
   .sel:focus, .search:focus { outline:none; border-color:var(--clay); }
   .count { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
 
+  /* 산업 변화 레이어 */
+  .kinds { display:flex; flex-wrap:wrap; gap:7px; margin:2px 0 14px; }
+  .kind-chip { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:12.5px; font-weight:600;
+    background:var(--btn-bg); border:1px solid var(--btn-border); color:var(--btn-color);
+    border-radius:999px; padding:6px 13px; cursor:pointer; transition:border-color .1s, color .1s; }
+  .kind-chip b { font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .kind-chip:hover { border-color:var(--clay); color:var(--clay); }
+  .kind-chip.on { background:var(--btn-active-bg); border-color:var(--clay); color:var(--btn-active-fg); }
+  .kind-chip.on b { color:var(--clay); }
+  .n-kind { display:inline-block; font-size:10.5px; font-weight:600; color:var(--muted);
+    border:1px solid var(--line); border-radius:4px; padding:1px 6px; }
+
   .feed { border-top:1px solid var(--line); }
   .nrow { display:flex; gap:16px; padding:14px 4px; border-bottom:1px solid var(--line); transition:background .1s; }
   .nrow:hover { background:var(--card-hover); }
@@ -65,8 +77,9 @@
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
-  글로벌 시총 TOP300 메가캡 종목 사이에서 나오는 뉴스를 <b>최신순</b>으로 모아 봅니다.
-  섹터·종목으로 좁혀 보고, 티커를 누르면 그 종목만, 제목을 누르면 원문으로. 관측용이며 투자 권유가 아닙니다.
+  글로벌 시총 TOP300 메가캡에서 <b>산업적으로 의미 있는 변화</b>만 걸러 <b>최신순</b>으로 봅니다
+  (신제품·증설·M&amp;A·계약·규제/소송·공급망·조직개편). 주가 등락·투자의견·목표주가 같은 시장 잡담은 제외.
+  위 <b>유형 칩</b>이 이번 주 변화의 전체 그림 — 누르면 그 유형만 봅니다. 관측용이며 투자 권유가 아닙니다.
 </p>
 
 <div class="controls">
@@ -78,6 +91,7 @@
   <span class="count" id="count"></span>
 </div>
 
+<div class="kinds" id="kinds"></div>
 <div class="feed" id="feed"></div>
 <div style="text-align:center"><button class="more" id="more" onclick="showMore()" hidden>더 보기</button></div>
 
@@ -89,9 +103,10 @@
 <script src="theme.js"></script>
 <script>
 const UNIVERSES = [100, 300];
-let universeN = 100;   // 기본은 시총 TOP100 — 읽을 수 있는 분량으로. 토글로 300까지 확장
+let universeN = 300;
 try { const _v = parseInt(localStorage.getItem("newsN"), 10); if (UNIVERSES.includes(_v)) universeN = _v; } catch (e) {}
-let ITEMS = [], SECTORS = [], sector = "", query = "", shown = 0;
+const KIND_ORDER = ["M&A·지분", "규제·소송", "증설·투자", "계약·제휴", "신제품·기술", "공급망·생산", "조직·인사", "기타"];
+let ITEMS = [], SECTORS = [], sector = "", query = "", kind = "", shown = 0;
 const PAGE = 80;
 const esc = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -106,13 +121,29 @@ function renderSectors() {
     `<option value="">전체 섹터</option>` + SECTORS.map(s => `<option value="${esc(s)}"${s === sector ? " selected" : ""}>${esc(s)}</option>`).join("");
 }
 
-function filtered() {
+/* 유형 필터를 뺀 나머지 조건 — 레이어의 유형별 건수는 이 기준으로 센다 */
+function baseFiltered() {
   const q = query.trim().toLowerCase();
   return ITEMS.filter(it =>
     it.rank <= universeN &&
     (!sector || it.sector === sector) &&
     (!q || it.name.toLowerCase().includes(q) || it.ticker.toLowerCase().includes(q)));
 }
+function filtered() {
+  return baseFiltered().filter(it => !kind || (it.k || "기타") === kind);
+}
+
+/* 산업 변화 레이어 — 어떤 종류의 변화가 얼마나 일어났는지 한눈에, 클릭하면 그 유형만 */
+function renderKinds() {
+  const base = baseFiltered();
+  const cnt = {};
+  base.forEach(it => { const k = it.k || "기타"; cnt[k] = (cnt[k] || 0) + 1; });
+  const chips = KIND_ORDER.filter(k => cnt[k]).map(k =>
+    `<button class="kind-chip ${kind === k ? "on" : ""}" onclick="setKind('${k.replace(/'/g, "\\'")}')">${k}<b>${cnt[k]}</b></button>`);
+  document.getElementById("kinds").innerHTML =
+    `<button class="kind-chip ${kind ? "" : "on"}" onclick="setKind('')">전체<b>${base.length}</b></button>` + chips.join("");
+}
+function setKind(k) { kind = (kind === k ? "" : k); shown = PAGE; renderKinds(); render(); }
 
 function row(it) {
   const tk = it.ticker.replace(".KS", "").replace(".KQ", "");
@@ -124,7 +155,7 @@ function row(it) {
     <div class="n-main">
       <div class="n-title"><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a></div>
       ${it.ot ? `<div class="n-orig">${esc(it.ot)}</div>` : ""}
-      <div class="n-src"><span class="n-sec">${esc(it.sector)}</span><span class="n-nm">${esc(it.name)}</span><span class="n-dim">· ${esc(it.s)} · ${esc(it.d)}</span></div>
+      <div class="n-src"><span class="n-kind">${esc(it.k || "기타")}</span><span class="n-sec">${esc(it.sector)}</span><span class="n-nm">${esc(it.name)}</span><span class="n-dim">· ${esc(it.s)} · ${esc(it.d)}</span></div>
     </div>
   </div>`;
 }
@@ -139,7 +170,7 @@ function render() {
   document.getElementById("count").textContent = `총 ${f.length.toLocaleString()}건`;
   document.getElementById("more").hidden = shown >= f.length;
 }
-function reset() { shown = PAGE; renderRange(); renderSectors(); render(); }
+function reset() { shown = PAGE; renderRange(); renderSectors(); renderKinds(); render(); }
 function showMore() { shown += PAGE; render(); }
 function pickTicker(t) {
   const el = document.getElementById("search");
@@ -148,8 +179,8 @@ function pickTicker(t) {
   reset(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-document.getElementById("sector").addEventListener("change", e => { sector = e.target.value; shown = PAGE; render(); });
-document.getElementById("search").addEventListener("input", e => { query = e.target.value; shown = PAGE; render(); });
+document.getElementById("sector").addEventListener("change", e => { sector = e.target.value; shown = PAGE; renderKinds(); render(); });
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; shown = PAGE; renderKinds(); render(); });
 
 function boot(d) {
   const items = [];

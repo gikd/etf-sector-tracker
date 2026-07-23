@@ -198,6 +198,35 @@ def _norm_tokens(t):
     return set(re.sub(r"[^a-z0-9가-힣]+", " ", (t or "").lower()).split())
 
 
+# 산업 변화 '유형' 분류 — 위에서부터 먼저 맞는 유형을 채택(뉴스 항목의 k 필드)
+KIND_PATTERNS = [
+    ("M&A·지분", re.compile(r"acqui(re|res|red|sition)|merger|\bmerges?\b|takeover|buyout|\bstake\b|"
+                            r"joint venture|spin-?off|divest", re.I)),
+    ("규제·소송", re.compile(r"antitrust|lawsuit|\bsues\b|\bsued\b|settlement|investigation|\bprobe\b|"
+                            r"\bfined\b|regulator|\bbans?\b|banned|sanction|tariff|export control|"
+                            r"subsidy|approval|approves?|approved|\bfda\b", re.I)),
+    ("증설·투자", re.compile(r"\bfab\b|foundry|gigafactory|\bplant\b|factory|data ?cent(er|re)|"
+                            r"invests? \$|investment of \$|(production|manufacturing|chip|memory|fab) capacity|"
+                            r"capacity (expansion|increase|boost)|expands?", re.I)),
+    ("계약·제휴", re.compile(r"\bcontract\b|supply (deal|agreement|contract)|wins (deal|order|contract|bid)|"
+                            r"awarded|partners? with|partnership|teams? up with|agreement with", re.I)),
+    ("신제품·기술", re.compile(r"unveil|launch|debut|introduc(e|es|ing)|next-?gen|breakthrough|"
+                             r"mass production|begins production|rolls? out|tape-?out|prototype", re.I)),
+    ("공급망·생산", re.compile(r"shortage|supply chain|production (cut|halt|delay|boost|increase)|recall|"
+                             r"outage|disrupt|data breach|\bbreach\b", re.I)),
+    ("조직·인사", re.compile(r"steps down|resigns?|\bappoints?\b|names new|\blayoffs?\b|job cuts|"
+                            r"restructuring|bankruptcy|new (business )?(division|unit)|establishes|"
+                            r"sets up (a |the )?(new )?(unit|division|plant|factory|joint venture|subsidiary|business)", re.I)),
+]
+
+
+def _news_kind(title):
+    for label, pat in KIND_PATTERNS:
+        if pat.search(title or ""):
+            return label
+    return "기타"
+
+
 def curate_news(items):
     """산업 이벤트 선별(items 의 t 는 번역 전 영문 헤드라인 전제):
     차단 출처 제거 · 정크/애널리스트/시장색 기사 제거 · **모든 출처에 산업 이벤트를 요구** ·
@@ -223,6 +252,7 @@ def curate_news(items):
             if norm in seen_str:
                 continue
             seen_str.add(norm)
+        it["k"] = _news_kind(title)   # 산업 변화 유형(영문 헤드라인 기준 — 번역 전에 분류)
         kept.append(it)
     return kept
 
