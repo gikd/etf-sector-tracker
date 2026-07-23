@@ -187,7 +187,7 @@ function boot(d) {
   for (const s of d.stocks) {
     if (!s.news || !s.news.length) continue;
     for (const nw of s.news)
-      items.push({ name: s.name, ticker: s.ticker, sector: s.sector, rank: s.rank || 9999, t: nw.t, ot: nw.ot, u: nw.u, s: nw.s, d: nw.d });
+      items.push({ name: s.name, ticker: s.ticker, sector: s.sector, rank: s.rank || 9999, t: nw.t, ot: nw.ot, u: nw.u, s: nw.s, d: nw.d, k: nw.k });
   }
   // 최신순: 날짜(MM-DD) 내림차순, 같은 날은 시총 상위 먼저
   items.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0) || (a.rank - b.rank));
