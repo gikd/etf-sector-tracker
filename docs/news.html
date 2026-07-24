@@ -32,6 +32,8 @@
   .kind-chip.on b { color:var(--clay); }
   .n-kind { display:inline-block; font-size:10.5px; font-weight:600; color:var(--muted);
     border:1px solid var(--line); border-radius:4px; padding:1px 6px; }
+  .n-corr { display:inline-block; font-size:10.5px; font-weight:700; color:var(--clay);
+    border:1px solid var(--clay); border-radius:4px; padding:1px 6px; }
 
   .feed { border-top:1px solid var(--line); }
   .nrow { display:flex; gap:16px; padding:14px 4px; border-bottom:1px solid var(--line); transition:background .1s; }
@@ -77,9 +79,9 @@
   <span class="updated" id="updated"></span>
 </header>
 <p class="note">
-  글로벌 시총 TOP300 메가캡에서 <b>산업적으로 의미 있는 변화</b>만 걸러 <b>최신순</b>으로 봅니다
-  (신제품·증설·M&amp;A·계약·규제/소송·공급망·조직개편). 주가 등락·투자의견·목표주가 같은 시장 잡담은 제외.
-  위 <b>유형 칩</b>이 이번 주 변화의 전체 그림 — 누르면 그 유형만 봅니다. 관측용이며 투자 권유가 아닙니다.
+  글로벌 시총 TOP300 메가캡에서 <b>산업적으로 큰 변화</b>만 골라 <b>중요도순 상위 40건</b>을 봅니다
+  (여러 매체가 다룬 사건·큰 규모·M&amp;A·규제/소송·증설을 우선). 주가 등락·투자의견·목표주가는 제외.
+  <b>유형 칩</b>으로 이번 흐름을 훑고, <b>더 보기</b>로 그 아래 뉴스까지 펼칠 수 있습니다. 관측용이며 투자 권유가 아닙니다.
 </p>
 
 <div class="controls">
@@ -107,7 +109,22 @@ let universeN = 300;
 try { const _v = parseInt(localStorage.getItem("newsN"), 10); if (UNIVERSES.includes(_v)) universeN = _v; } catch (e) {}
 const KIND_ORDER = ["M&A·지분", "규제·소송", "증설·투자", "계약·제휴", "신제품·기술", "공급망·생산", "조직·인사", "기타"];
 let ITEMS = [], SECTORS = [], sector = "", query = "", kind = "", shown = 0;
-const PAGE = 80;
+const PAGE = 40;   // 기본으로 '큰 뉴스' 중요도 상위 40건만
+const KIND_W = { "M&A·지분": 3, "규제·소송": 3, "증설·투자": 2, "계약·제휴": 2, "신제품·기술": 1, "공급망·생산": 1, "조직·인사": 1, "기타": 0 };
+const TOP_SRC = /bloomberg|reuters|wall street journal|wsj|financial times|cnbc|nikkei|the information|barron|연합|한국경제|매일경제/i;
+const MONEY = /\$\s?\d[\d.,]*\s?(b|bn|billion|trillion|m|million)\b|\d[\d.,]*\s?(억|조)\s*달러/i;
+const BIG_MONEY = /\$\s?\d[\d.,]*\s?(b|bn|billion|trillion)\b|\d[\d.,]*\s?조\s*달러|[1-9]\d{2,}\s?억\s*달러/i;
+/* '큰 뉴스' 점수 — 교차보도(여러 매체)·회사규모·유형·금액·매체등급 */
+function impOf(it) {
+  let s = ((it.dc || 1) - 1) * 3;
+  const r = it.rank || 9999;
+  s += r <= 20 ? 4 : r <= 50 ? 3 : r <= 100 ? 2 : 1;
+  s += KIND_W[it.k || "기타"] || 0;
+  const h = it.ot || it.t || "";
+  if (MONEY.test(h)) s += BIG_MONEY.test(h) ? 3 : 1;
+  if (TOP_SRC.test(it.s || "")) s += 2;
+  return s;
+}
 const esc = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function renderRange() {
@@ -129,21 +146,20 @@ function baseFiltered() {
     (!sector || it.sector === sector) &&
     (!q || it.name.toLowerCase().includes(q) || it.ticker.toLowerCase().includes(q)));
 }
-function filtered() {
-  return baseFiltered().filter(it => !kind || (it.k || "기타") === kind);
+/* 중요도(큰 뉴스) 내림차순, 동점은 최신 */
+function pool() {
+  return baseFiltered().sort((a, b) => (b._imp - a._imp) || (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
 }
-
-/* 산업 변화 레이어 — 어떤 종류의 변화가 얼마나 일어났는지 한눈에, 클릭하면 그 유형만 */
-function renderKinds() {
-  const base = baseFiltered();
+/* 산업 변화 레이어 — 지금 보이는 상위 창(win) 안에서 유형별 건수, 클릭하면 그 유형만 */
+function renderKinds(win) {
   const cnt = {};
-  base.forEach(it => { const k = it.k || "기타"; cnt[k] = (cnt[k] || 0) + 1; });
+  win.forEach(it => { const k = it.k || "기타"; cnt[k] = (cnt[k] || 0) + 1; });
   const chips = KIND_ORDER.filter(k => cnt[k]).map(k =>
     `<button class="kind-chip ${kind === k ? "on" : ""}" onclick="setKind('${k.replace(/'/g, "\\'")}')">${k}<b>${cnt[k]}</b></button>`);
   document.getElementById("kinds").innerHTML =
-    `<button class="kind-chip ${kind ? "" : "on"}" onclick="setKind('')">전체<b>${base.length}</b></button>` + chips.join("");
+    `<button class="kind-chip ${kind ? "" : "on"}" onclick="setKind('')">전체<b>${win.length}</b></button>` + chips.join("");
 }
-function setKind(k) { kind = (kind === k ? "" : k); shown = PAGE; renderKinds(); render(); }
+function setKind(k) { kind = (kind === k ? "" : k); render(); }
 
 function row(it) {
   const tk = it.ticker.replace(".KS", "").replace(".KQ", "");
@@ -155,22 +171,26 @@ function row(it) {
     <div class="n-main">
       <div class="n-title"><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a></div>
       ${it.ot ? `<div class="n-orig">${esc(it.ot)}</div>` : ""}
-      <div class="n-src"><span class="n-kind">${esc(it.k || "기타")}</span><span class="n-sec">${esc(it.sector)}</span><span class="n-nm">${esc(it.name)}</span><span class="n-dim">· ${esc(it.s)} · ${esc(it.d)}</span></div>
+      <div class="n-src"><span class="n-kind">${esc(it.k || "기타")}</span>${(it.dc || 1) >= 3 ? `<span class="n-corr">${it.dc}개 매체</span>` : ""}<span class="n-sec">${esc(it.sector)}</span><span class="n-nm">${esc(it.name)}</span><span class="n-dim">· ${esc(it.s)} · ${esc(it.d)}</span></div>
     </div>
   </div>`;
 }
 
 function render() {
-  const f = filtered();
   if (!shown) shown = PAGE;
-  const slice = f.slice(0, shown);
-  document.getElementById("feed").innerHTML = slice.length
-    ? slice.map(row).join("")
+  const p = pool();
+  const win = p.slice(0, shown);                    // 중요도 상위 shown건
+  renderKinds(win);
+  const feed = kind ? win.filter(it => (it.k || "기타") === kind) : win;
+  document.getElementById("feed").innerHTML = feed.length
+    ? feed.map(row).join("")
     : `<div class="empty">조건에 맞는 뉴스가 없습니다.</div>`;
-  document.getElementById("count").textContent = `총 ${f.length.toLocaleString()}건`;
-  document.getElementById("more").hidden = shown >= f.length;
+  document.getElementById("count").textContent = kind
+    ? `${feed.length}건 (상위 ${win.length} 중)`
+    : `큰 뉴스 상위 ${win.length}건 · 전체 ${p.length}`;
+  document.getElementById("more").hidden = shown >= p.length;
 }
-function reset() { shown = PAGE; renderRange(); renderSectors(); renderKinds(); render(); }
+function reset() { shown = PAGE; renderRange(); renderSectors(); render(); }
 function showMore() { shown += PAGE; render(); }
 function pickTicker(t) {
   const el = document.getElementById("search");
@@ -179,18 +199,17 @@ function pickTicker(t) {
   reset(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-document.getElementById("sector").addEventListener("change", e => { sector = e.target.value; shown = PAGE; renderKinds(); render(); });
-document.getElementById("search").addEventListener("input", e => { query = e.target.value; shown = PAGE; renderKinds(); render(); });
+document.getElementById("sector").addEventListener("change", e => { sector = e.target.value; shown = PAGE; render(); });
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; shown = PAGE; render(); });
 
 function boot(d) {
   const items = [];
   for (const s of d.stocks) {
     if (!s.news || !s.news.length) continue;
     for (const nw of s.news)
-      items.push({ name: s.name, ticker: s.ticker, sector: s.sector, rank: s.rank || 9999, t: nw.t, ot: nw.ot, u: nw.u, s: nw.s, d: nw.d, k: nw.k });
+      items.push({ name: s.name, ticker: s.ticker, sector: s.sector, rank: s.rank || 9999, t: nw.t, ot: nw.ot, u: nw.u, s: nw.s, d: nw.d, k: nw.k, dc: nw.dc || 1 });
   }
-  // 최신순: 날짜(MM-DD) 내림차순, 같은 날은 시총 상위 먼저
-  items.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0) || (a.rank - b.rank));
+  items.forEach(it => it._imp = impOf(it));   // '큰 뉴스' 점수 사전계산(정렬 기준)
   ITEMS = items;
   SECTORS = [...new Set(d.stocks.map(s => s.sector))].sort();
   document.getElementById("updated").textContent = `뉴스 ${d.updated} · TOP${d.count} · ${items.length.toLocaleString()}건`;

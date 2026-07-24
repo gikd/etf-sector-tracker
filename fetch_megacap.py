@@ -231,7 +231,7 @@ def curate_news(items):
     """산업 이벤트 선별(items 의 t 는 번역 전 영문 헤드라인 전제):
     차단 출처 제거 · 정크/애널리스트/시장색 기사 제거 · **모든 출처에 산업 이벤트를 요구** ·
     근접 중복 제거. (주가 등락·투자의견·실적 코멘터리는 산업 사건이 아니므로 제외)"""
-    kept, seen_tok, seen_str = [], [], set()
+    kept, reps, seen_str = [], [], set()   # reps: [(토큰집합, 대표항목)] — 근접 클러스터
     for it in items:
         title = it.get("t", "")
         if _src_tier(it.get("s", "")) == "block":
@@ -242,18 +242,21 @@ def curate_news(items):
             continue
         toks = _norm_tokens(title)
         if toks:
-            if any(len(toks & p) / len(toks | p) >= 0.7 for p in seen_tok):
-                continue  # 근접 중복(자카드 ≥ 0.7)
-            seen_tok.append(toks)
-        else:  # 비라틴/기호만 제목 → 글자·숫자가 없으면(공백·기호만) 드롭, 있으면(CJK 등) 전체문자열로 중복 처리
-            if not re.sub(r"[\W_]+", "", title):  # 모든 스크립트의 글자/숫자만 남긴 게 비면 드롭
+            hit = next((ri for rt, ri in reps if rt and len(toks & rt) / len(toks | rt) >= 0.6), None)
+            if hit is not None:                 # 같은 사건의 다른 매체 보도 → 대표의 교차보도수 +1
+                hit["dc"] = hit.get("dc", 1) + 1
+                continue
+        else:  # 비라틴/기호만 제목 → 글자·숫자가 없으면 드롭, 있으면(CJK 등) 전체문자열로 중복 처리
+            if not re.sub(r"[\W_]+", "", title):
                 continue
             norm = re.sub(r"\s+", " ", title.strip().lower())
             if norm in seen_str:
                 continue
             seen_str.add(norm)
         it["k"] = _news_kind(title)   # 산업 변화 유형(영문 헤드라인 기준 — 번역 전에 분류)
+        it["dc"] = 1                  # 교차보도 수(같은 사건을 다룬 매체 수)
         kept.append(it)
+        reps.append((toks, it))
     return kept
 
 
@@ -278,7 +281,8 @@ def fetch_news(query):
         items.sort(key=lambda x: x["_dt"], reverse=True)
         for x in items:
             del x["_dt"]
-        return curate_news(items)[:NEWS_KEEP]
+        # 종목당 '가장 크게 다뤄진(교차보도 많은)' 뉴스 우선으로 NEWS_KEEP개 (동점은 최신 유지)
+        return sorted(curate_news(items), key=lambda x: -x.get("dc", 1))[:NEWS_KEEP]
     except Exception:
         return []
 
