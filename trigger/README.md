@@ -1,27 +1,30 @@
-# ETF 트래커 데이터 갱신 — 외부 트리거 (Cloudflare Worker)
+# ETF 트래커 + 추세 워치리스트 데이터 갱신 — 외부 트리거 (Cloudflare Worker)
 
 GitHub Actions 의 `schedule(cron)` 은 공개 저장소에서 예약 실행을 자주 누락한다(특히 미국장 개장).
-이 워커가 **정확한 개장/마감 시각**에 `update.yml` 을 `workflow_dispatch` 로 깨워서, 그 두 시점의 데이터가 항상 갱신되게 한다. on-demand dispatch 는 schedule 쓰로틀의 영향을 받지 않는다.
+이 워커가 **정확한 개장/마감 시각**에 대상 워크플로를 `workflow_dispatch` 로 깨워서, 그 시점의 데이터가 항상 갱신되게 한다. on-demand dispatch 는 schedule 쓰로틀의 영향을 받지 않는다. 크론 표현식별 대상 저장소 라우팅은 `worker.js` 의 `CRON_ROUTES`.
 
 기존 GitHub cron 은 그대로 둔다 — 장중 신선도용 '무료 백업'으로 둔다(잡히면 좋고, 안 잡혀도 이 워커가 개장/마감을 보장).
 
-## 발사 시각 (`wrangler.toml`) — 장중 매시간(정시 05분). 모든 시각 UTC.
-| 구간 | UTC cron | 현지 |
-|---|---|---|
-| 한국장 매시간 | `5 0-6 * * 1-5` | 09:00~15:30 KST (= 00:00~06:30 UTC) 매시 05분 |
-| 미국장 매시간 | `5 13-21 * * 1-5` | 서머 13:30~20:00 / 윈터 14:30~21:00 UTC 매시 05분 |
+## 발사 시각 (`wrangler.toml`) — 모든 시각 UTC.
+| 구간 | UTC cron | 현지 | 대상 |
+|---|---|---|---|
+| 한국장 매시간 | `5 0-6 * * 1-5` | 09:00~15:30 KST (= 00:00~06:30 UTC) 매시 05분 | etf-sector-tracker |
+| 미국장 매시간 | `5 13-21 * * 1-5` | 서머 13:30~20:00 / 윈터 14:30~21:00 UTC 매시 05분 | etf-sector-tracker |
+| 한국장 마감 스캔 | `0 7 * * 1-5` | 16:00 KST | trend (추세 워치리스트) |
 
 밤·주말·휴장엔 발사 없음(가격 안 변함). 장 밖 시각 발사도 무해 — `update.yml` 은 데이터가 실제로 바뀐 경우에만 커밋한다.
 
 ## 1회 설정 (약 10분)
 
-### 1) GitHub 토큰 발급 (fine-grained, 이 저장소 전용)
+### 1) GitHub 토큰 발급 (fine-grained, 두 저장소 전용)
 1. https://github.com/settings/personal-access-tokens/new
-2. **Resource owner**: `gikd` · **Repository access** → *Only select repositories* → `etf-sector-tracker`
+2. **Resource owner**: `gikd` · **Repository access** → *Only select repositories* → `etf-sector-tracker` + `trend`
 3. **Permissions** → *Repository permissions* → **Actions: Read and write** (이거 하나면 됨)
-4. Generate → 토큰 문자열 복사 (`github_pat_...`)
+4. **Expiration**: 기본 30일이면 조용히 만료돼 dispatch 가 전멸한다(2026-08-07 사고). 최대(1년)로 두고 만료 전 갱신.
+5. Generate → 토큰 문자열 복사 (`github_pat_...`)
 
-> 권한이 이 저장소의 Actions 실행 하나로 제한되므로, 새어도 피해 범위는 "ETF 데이터 새로고침"뿐.
+> 권한이 두 저장소의 Actions 실행으로 제한되므로, 새어도 피해 범위는 "데이터 새로고침"뿐.
+> **주의**: 토큰이 만료되어도 워커는 조용히 실패한다(waitUntil 이 응답을 버림). dispatch 실행이 안 보이면 토큰 만료부터 의심.
 
 ### 2) 워커 배포
 ```bash
