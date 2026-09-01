@@ -1,4 +1,4 @@
-/* megacap.html · perspective.html 공용 — 통화 포맷 / 스파크라인 / 일봉 캔들 / 뉴스 / 모달 제어.
+/* index.html · news.html 공용 — 통화 포맷 / 스파크라인 / 일봉 캔들 / 뉴스 / 모달 제어.
    (index.html 은 지표·차트 규격이 달라 자체 구현을 유지한다.)
    각 페이지는 renderModal() 과 byTicker 를 정의하고, 모달 상태(modalTicker/modalWin)는 여기서 공유. */
 
