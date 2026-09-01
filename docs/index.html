@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=Nanum+Myeongjo:wght@400;700;800&family=Staatliches&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="theme.css?v=260901">
 <style>
   /* megacap 전용 컴포넌트 (공통은 theme.css) — 색·구조는 변수로 구동 */
 
@@ -57,6 +57,25 @@
   .c-per .pl { font-family:var(--sans); font-size:10px; }
   .c-per b { color:var(--clay); font-weight:600; }
   .c-per .dot { opacity:.4; margin:0 2px; }
+
+  /* 모바일: 카드 2열 + 막대 트랙 확보 */
+  @media (max-width:560px) {
+    .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+    .card { padding:10px 10px 9px; }
+    .card .nm { font-size:13px; }
+    .card .today { font-size:11.5px; }
+    .card svg { height:28px; margin:7px 0; }
+    .c-px { font-size:12px; }
+    .c-per { font-size:10.5px; }
+    .bars { padding:10px 10px; }
+    .bar-row { gap:7px; }
+    .bar-rank { width:14px; font-size:11px; }
+    .bar-label { width:92px; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bar-val { width:52px; font-size:12px; }
+    .sec-head { margin-top:24px; }
+    .sec-head h3 { font-size:15px; }
+    .sec-why { font-size:14px; line-height:1.8; padding-left:14px; }
+  }
 </style>
 </head>
 <body>
@@ -97,9 +116,9 @@
 
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
 
-<script src="theme.js"></script>
-<script src="capture.js"></script>
-<script src="stocks-common.js"></script>
+<script src="theme.js?v=260901"></script>
+<script src="capture.js?v=260901"></script>
+<script src="stocks-common.js?v=260901"></script>
 <script>
 const PERIODS = [
   { key: "r1d", label: "1일" }, { key: "r1w", label: "1주" }, { key: "r1m", label: "1개월" },

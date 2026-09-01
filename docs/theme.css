@@ -152,3 +152,20 @@ footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line);
 .news .orig { color:var(--muted); font-size:11.5px; margin-top:2px; opacity:.8; }
 .holdings .hold-note { color:var(--muted); font-size:11.5px; font-weight:400; margin-left:6px;
   text-transform:none; letter-spacing:0; }
+
+/* ── 모바일 공통 (3 페이지) ──────────────────────────────────── */
+@media (max-width:560px) {
+  body { padding:0 14px 56px; }
+  .nav { gap:16px; margin-bottom:20px; }
+  h1 { font-size:26px; }
+  .note { font-size:13px; line-height:1.6; margin:10px 0 18px; }
+  .periods button, .weeks button, .tabs button { padding:5px 11px; font-size:12.5px; }
+  .tabs button { padding:4px 10px; font-size:11.5px; }
+  h2 { margin-top:28px; }
+  /* 모달: 화면을 거의 채우고, 차트 폭 확보 */
+  .modal-bg { padding:2vh 6px; }
+  .modal { padding:16px 13px 14px; }
+  .modal-head h3 { font-size:17px; }
+  .modal-head .px { font-size:15px; }
+  .chip { font-size:11px; padding:3px 8px; }
+}

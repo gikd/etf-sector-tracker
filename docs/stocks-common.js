@@ -30,7 +30,10 @@ function candleSVG(s, win) {
   const n = Math.min(win, c.c.length);
   const o = c.o.slice(-n), h = c.h.slice(-n), l = c.l.slice(-n), cl = c.c.slice(-n), v = c.v.slice(-n);
   const dates = s.dates.slice(-n);
-  const W = 880, PH = 280, VH = 60, B = 24, T = 10, L = 6, R = 58;
+  /* viewBox 폭을 화면에 맞춰 축소 — 모바일에서 축 글자가 실제 크기(11px)로 렌더되게 */
+  const narrow = (window.innerWidth || 880) < 640;
+  const W = narrow ? Math.max(300, window.innerWidth - 52) : 880,
+    PH = narrow ? 230 : 280, VH = narrow ? 46 : 60, B = 24, T = 10, L = 6, R = narrow ? 44 : 58;
   const H = T + PH + 8 + VH + B, pw = W - L - R;
   let pmin = Math.min(...l), pmax = Math.max(...h);
   const pad = (pmax - pmin) * 0.05 || 1; pmin -= pad; pmax += pad;
