@@ -90,7 +90,7 @@
 </header>
 <p class="note">
   전 세계 시총 최상위 ~300개(큰돈도 쉽게 거래 가능한 초대형주)를 직접 섹터 분류.
-  <b>보기</b> 전환: <b>섹터</b>(어느 섹터로 돈이 쏠리나 → 그 안의 리더) · <b>상대강도</b>(유니버스 전체에서 선택 기간 수익률 상위 종목 + 중앙값 대비 강도).
+  <b>보기</b> 전환: <b>섹터</b>(어느 섹터로 돈이 쏠리나 → 그 안의 리더) · <b>상대강도</b>(유니버스 전체에서 선택 기간 수익률 상위 종목 + 중앙값 대비 강도) · <b>신고가</b>(52주 고점 −3% 이내) · <b>신저가</b>(52주 저점 +3% 이내).
   기간 버튼은 정렬 기준(1일~YTD, 상대강도는 기본 1개월). 카드엔 <b>올해·내년 예상 PER</b>.
   <b>카드 클릭 = 일봉 차트 + 수익률 + 뉴스 상세.</b> 관측용이며 투자 권유가 아닙니다.
 </p>
@@ -125,9 +125,14 @@ const PERIODS = [
   { key: "r3m", label: "3개월" }, { key: "ytd", label: "연초이후" },
 ];
 let DATA = null, period = "r1w";
-const MODES = [{ key: "sector", label: "섹터" }, { key: "rs", label: "상대강도" }];
+const MODES = [
+  { key: "sector", label: "섹터" }, { key: "rs", label: "상대강도" },
+  { key: "high", label: "신고가" }, { key: "low", label: "신저가" },
+];
+const MODE_KEYS = MODES.map(m => m.key);
+const HIGH_TH = -3, LOW_TH = 3;   // 52주 고점 −3% 이내 = 신고가권 · 저점 +3% 이내 = 신저가권
 let mode = "sector";
-try { const _m = localStorage.getItem("megacapMode"); if (_m === "rs" || _m === "sector") mode = _m; } catch (e) {}
+try { const _m = localStorage.getItem("megacapMode"); if (MODE_KEYS.includes(_m)) mode = _m; } catch (e) {}
 if (mode === "rs") period = "r1m";
 const UNIVERSES = [100, 300];
 let universeN = 300;
@@ -194,6 +199,38 @@ function rsCard(s, rankNum, med) {
   </div>`;
 }
 
+/* 신고가/신저가: 유니버스 전체에서 52주 고점/저점 근접 종목만. 고점(저점)에 가까운 순 */
+function renderHiLo() {
+  const uni = DATA.stocks.filter(s => !(s.rank != null && s.rank > universeN));
+  let list;
+  if (mode === "high")
+    list = uni.filter(s => s.from_high != null && s.from_high >= HIGH_TH)
+      .sort((a, b) => b.from_high - a.from_high);   // 0(고점)에 가까운 순
+  else
+    list = uni.filter(s => s.from_low != null && s.from_low <= LOW_TH)
+      .sort((a, b) => a.from_low - b.from_low);      // 0(저점)에 가까운 순
+  const board = document.getElementById("board");
+  if (!list.length) {
+    board.innerHTML = `<p class="note" style="padding:8px 0">해당 구간 종목이 없습니다 (TOP${universeN}).</p>`;
+    return;
+  }
+  board.innerHTML = `<div class="grid">${list.map((s, i) => hlCard(s, i + 1)).join("")}</div>`;
+}
+function hlCard(s, rankNum) {
+  const v = s[period];
+  const isHigh = mode === "high";
+  const dist = isHigh ? s.from_high : s.from_low;
+  const lead = isHigh ? (dist >= -0.5) : (dist <= 0.5);   // 사실상 고점/저점 갱신
+  const distStr = isHigh ? fmt(dist) : "+" + (dist ?? 0).toFixed(2) + "%";
+  return `<div class="card ${lead ? "lead" : ""}" onclick="openModal('${s.ticker}')">
+    <div class="c-top"><span class="nm">${s.name}</span><span class="today ${cls(v)}">${fmt(v)}</span></div>
+    <div class="tk">#${rankNum} · ${s.sector}${s.rank ? ` · 시총 ${s.rank}위` : ""}${s.lowliq ? " · 저유동" : ""}</div>
+    ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
+    <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
+    <div class="c-per"><span class="pl">52주 ${isHigh ? "고점" : "저점"}대비</span> <b>${distStr}</b></div>
+  </div>`;
+}
+
 function renderBars() {
   const secs = sectors();
   const maxAbs = Math.max(1, ...secs.map(s => Math.abs(s.med ?? 0)));
@@ -252,6 +289,14 @@ function applyChrome() {
     title.textContent = `상대강도 리더 · ${periodLabel()}`;
     sub.textContent = `${periodLabel()} 수익률 상위순 · 카드의 '중앙값 대비'가 유니버스(TOP${universeN}) 대비 상대강도`;
     bars.style.display = "none";
+  } else if (mode === "high") {
+    title.textContent = "신고가 · 52주 고점 −3% 이내";
+    sub.textContent = `고점에 근접한 종목 · 고점대비 0%에 가까운 순 · TOP${universeN}`;
+    bars.style.display = "none";
+  } else if (mode === "low") {
+    title.textContent = "신저가 · 52주 저점 +3% 이내";
+    sub.textContent = `저점에 근접한 종목 · 저점대비 0%에 가까운 순 · TOP${universeN}`;
+    bars.style.display = "none";
   } else {
     title.textContent = "섹터 강세 순위";
     sub.textContent = "섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동";
@@ -262,6 +307,7 @@ function renderAll() {
   applyChrome();
   if (!DATA) return;                  // 데이터 전엔 chrome만 (rs 복원 시 섹터 헤더/빈 막대 깜빡임 방지)
   if (mode === "rs") renderLeaders();
+  else if (mode === "high" || mode === "low") renderHiLo();
   else { renderBars(); renderBoard(); }
 }
 // 테마 토글 시 차트 색이 변수로 따라오지만, 안전하게 다시 그린다
@@ -301,6 +347,7 @@ function renderModal() {
       <span class="chip">3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span>
       <span class="chip">YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span>
       <span class="chip">52주고점대비 <b class="${cls(s.from_high)}">${fmt(s.from_high)}</b></span>
+      ${s.from_low != null ? `<span class="chip">52주저점대비 <b class="up">+${s.from_low.toFixed(2)}%</b></span>` : ""}
       ${s.mcap_b ? `<span class="chip">시총 <b>$${(s.mcap_b / 1000).toFixed(2)}T</b></span>` : ""}
       ${per}
     </div>

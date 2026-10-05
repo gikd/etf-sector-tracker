@@ -153,6 +153,7 @@ def fetch(sym, retries=3):
             dates = [datetime.fromtimestamp(r[0], tz=timezone.utc).strftime("%Y-%m-%d") for r in rows]
             close = [r[1] for r in rows]
             high = max(close)
+            low = min(close)
             n = HIST_DAYS
             return {
                 "price": round(close[-1], 2),
@@ -160,6 +161,7 @@ def fetch(sym, retries=3):
                 "r1d": pct(close, 1), "r1w": pct(close, 5), "r1m": pct(close, 21),
                 "r3m": pct(close, 63), "ytd": ytd_pct(dates, close),
                 "from_high": round((close[-1] / high - 1) * 100, 2),
+                "from_low": round((close[-1] / low - 1) * 100, 2),
                 "spark": [round(c, 2) for c in close[-21:]],
                 "dates": dates[-n:],
                 "candles": {
