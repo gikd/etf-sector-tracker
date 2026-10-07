@@ -424,14 +424,14 @@ function setCommentary(c) {
   if (DATA) renderAll();   // mode-aware: rs 모드에선 RS 그리드가 섹터 뷰로 덮이지 않게
 }
 
-// 티커 → 트레이딩뷰 심볼 URL (접미사로 거래소 매핑, 미국주는 심볼만)
+// 티커 → 트레이딩뷰 차트 URL (접미사로 거래소 매핑, 미국주는 심볼만 — TV가 거래소 자동 해석)
 function tvUrl(tk) {
   const EX = { T:"TSE", HK:"HKEX", PA:"EURONEXT", AX:"ASX", KS:"KRX", DE:"XETR",
     MC:"BME", MI:"MIL", NS:"NSE", SR:"TADAWUL", SW:"SIX", TO:"TSX", TW:"TWSE" };
   const dot = tk.indexOf(".");
-  if (dot < 0) return "https://www.tradingview.com/symbols/" + encodeURIComponent(tk) + "/";
-  const sym = tk.slice(0, dot), ex = EX[tk.slice(dot + 1)];
-  return "https://www.tradingview.com/symbols/" + (ex ? ex + "-" : "") + encodeURIComponent(sym) + "/";
+  const sym = dot < 0 ? tk : tk.slice(0, dot);
+  const ex = dot < 0 ? "" : (EX[tk.slice(dot + 1)] || "");
+  return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(ex ? ex + ":" + sym : sym);
 }
 
 function renderModal() {
