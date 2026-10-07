@@ -77,6 +77,12 @@
   /* 모달 내 이력 */
   .tc-modal { margin:14px 0 4px; }
   .tc-modal-h { font-family:var(--sans); font-size:12.5px; font-weight:800; color:var(--clay); margin-bottom:8px; }
+  /* 트레이딩뷰 바로가기 (차트 아래) */
+  .tv-row { margin:10px 0 2px; }
+  .tv-btn { display:inline-flex; align-items:center; gap:6px; background:transparent; border:1.5px solid var(--line-strong);
+    color:var(--muted); border-radius:999px; padding:5px 14px; font-size:12px; font-weight:700; font-family:var(--sans);
+    letter-spacing:.02em; text-decoration:none; transition:all .18s; white-space:nowrap; }
+  .tv-btn:hover { border-color:var(--clay); color:var(--clay); }
 
   /* 모바일: 카드 2열 + 막대 트랙 확보 */
   @media (max-width:560px) {
@@ -418,6 +424,16 @@ function setCommentary(c) {
   if (DATA) renderAll();   // mode-aware: rs 모드에선 RS 그리드가 섹터 뷰로 덮이지 않게
 }
 
+// 티커 → 트레이딩뷰 심볼 URL (접미사로 거래소 매핑, 미국주는 심볼만)
+function tvUrl(tk) {
+  const EX = { T:"TSE", HK:"HKEX", PA:"EURONEXT", AX:"ASX", KS:"KRX", DE:"XETR",
+    MC:"BME", MI:"MIL", NS:"NSE", SR:"TADAWUL", SW:"SIX", TO:"TSX", TW:"TWSE" };
+  const dot = tk.indexOf(".");
+  if (dot < 0) return "https://www.tradingview.com/symbols/" + encodeURIComponent(tk) + "/";
+  const sym = tk.slice(0, dot), ex = EX[tk.slice(dot + 1)];
+  return "https://www.tradingview.com/symbols/" + (ex ? ex + "-" : "") + encodeURIComponent(sym) + "/";
+}
+
 function renderModal() {
   const s = byTicker(modalTicker);
   if (!s) return;
@@ -443,6 +459,7 @@ function renderModal() {
     </div>
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
+    <div class="tv-row"><a class="tv-btn" href="${tvUrl(s.ticker)}" target="_blank" rel="noopener noreferrer" title="트레이딩뷰에서 차트 보기">트레이딩뷰에서 보기 ↗</a></div>
     ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수 '오늘의 기업'에서 다룸 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker)}</div></div>` : ""}
     ${newsHTML(s)}`;
 }
