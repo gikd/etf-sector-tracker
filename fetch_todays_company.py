@@ -20,8 +20,8 @@ DOCS = Path(__file__).parent / "docs"
 OUT = DOCS / "todays_company.json"
 UNIVERSE = DOCS / "megacap_universe.json"
 
-# 묘수 라이브 '회차' 데이터소스 ID
-DB_ID = "27d9a188-9c10-46dc-a94e-a58c1905142a"
+# 묘수 라이브 '회차' 데이터베이스 ID (REST API는 DB id — data source id 아님)
+DB_ID = "9fd6618e-b67f-40b4-95e8-057ee3fcde6f"
 TOKEN = os.environ.get("NOTION_TOKEN", "")
 API = "https://api.notion.com/v1"
 HEADERS = {
@@ -30,8 +30,14 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# 헤더의 '회사명(TICKER)' 또는 '회사명 (TICKER) · 요약' 에서 티커 추출
-TICKER_RE = re.compile(r"\(([A-Z0-9][A-Z0-9.\-]{0,6})\)")
+# 괄호 안 내용에서 티커 후보 파싱 (영문 티커 또는 KR/JP 숫자 티커)
+PARENS_RE = re.compile(r"\(([^)]{1,40})\)")
+def parse_ticker(parens_content):
+    for tok in re.split(r"[^A-Za-z0-9.\-]+", parens_content):
+        # 영문 티커만 인정(KR/JP 숫자 티커는 300 명단이 .KS/.T 접미사라 매칭 불가 + 연도 오탐 방지)
+        if re.fullmatch(r"[A-Z]{1,6}(?:[.\-][A-Z0-9]{1,4})?", tok) and not tok.isdigit():
+            return tok
+    return None
 
 
 def _req(method, path, body=None):
@@ -76,40 +82,65 @@ def list_children(block_id):
     return out
 
 
-def extract(page_blocks):
-    """페이지 블록들에서 '오늘의 기업' 섹션들을 (ticker, name, blurb) 리스트로."""
+def _clean_name(s):
+    s = s.lstrip(":：").strip()
+    s = re.split(r"[(（·,]", s)[0].strip()
+    return s
+
+def _is_stats(t):
+    return (t.startswith("트래커") or t.startswith(";") or t.startswith("；")
+            or "상대강도" in t or "종가" in t
+            or re.match(r"^\d{1,2}월", t) is not None)
+
+def extract(page_blocks, name_map=None):
+    """'오늘의 기업' 섹션들을 (ticker, name, blurb)로. 포맷 변주 대응."""
+    name_map = name_map or {}
     found = []
     blocks = page_blocks
     for i, b in enumerate(blocks):
-        bt = b.get("type", "")
-        if not bt.startswith("heading"):
+        if not b.get("type", "").startswith("heading"):
             continue
-        if rich_text(b) != "오늘의 기업":
+        if rich_text(b).strip() != "오늘의 기업":
             continue
-        # 헤더 다음 첫 비어있지 않은 문단 = 회사 라인
-        line, blurb = "", ""
+        # 헤더 다음 ~8개 텍스트 블록(이미지·빈블록·'출처' 제외)
+        texts = []
         for nb in blocks[i + 1:]:
             if nb["type"] in ("paragraph", "heading_1", "heading_2", "heading_3"):
-                txt = rich_text(nb)
-                if txt:
-                    if not line:
-                        line = txt
-                        # '·' 뒤에 요약이 같은 줄에 붙은 경우
-                        if "·" in line:
-                            head, _, rest = line.partition("·")
-                            line, blurb = head.strip(), rest.strip()
-                    elif not blurb:
-                        blurb = txt
-                        break
-                    else:
-                        break
-            elif nb["type"] in ("divider",):
-                continue
-        m = TICKER_RE.search(line)
-        if not m:
+                t = rich_text(nb).strip()
+                if t and t != "출처":
+                    texts.append(t)
+            if len(texts) >= 8:
+                break
+        if not texts:
             continue
-        ticker = m.group(1)
-        name = line[: m.start()].strip().rstrip("(").strip()
+        # 회사 라인 = 괄호 티커가 있거나 이름맵에 걸리는 첫 줄
+        ticker, name, comp_idx = None, "", -1
+        for j, t in enumerate(texts):
+            for m in PARENS_RE.finditer(t):
+                tk = parse_ticker(m.group(1))
+                if tk:
+                    ticker = tk
+                    name = t[: m.start()].strip().rstrip("(（").strip() or _clean_name(t)
+                    comp_idx = j
+                    break
+            if ticker:
+                break
+            nm = _clean_name(t)
+            if nm and nm in name_map:
+                ticker, name, comp_idx = name_map[nm], nm, j
+                break
+        if not ticker:
+            continue
+        # 요약 = 회사 라인 이후 첫 산문 문장(통계·사견·날짜 줄 제외)
+        blurb = ""
+        for t in texts[comp_idx + 1:]:
+            if len(t) >= 12 and not _is_stats(t):
+                blurb = t
+                break
+        if not blurb:
+            after = texts[comp_idx].split("·", 1)
+            if len(after) > 1 and len(after[1].strip()) >= 12:
+                blurb = after[1].strip()
         found.append({"ticker": ticker, "name": name or ticker, "blurb": blurb})
     return found
 
@@ -117,10 +148,14 @@ def extract(page_blocks):
 def main():
     if not TOKEN:
         raise SystemExit("NOTION_TOKEN 환경변수가 필요합니다.")
-    valid = None
+    valid, name_map = None, {}
     if UNIVERSE.exists():
         uni = json.loads(UNIVERSE.read_text())
         valid = {m["ticker"] for m in uni.get("members", [])}
+        for m in uni.get("members", []):
+            nm = re.split(r"[(（]", m["name"])[0].strip()   # '알파벳(구글)' → '알파벳'
+            if nm:
+                name_map.setdefault(nm, m["ticker"])
 
     pages = query_pages()
     print(f"회차 {len(pages)}개 스캔...")
@@ -133,7 +168,7 @@ def main():
         except Exception as e:
             print(f"  스킵 {pg['date']}: {e}")
             continue
-        for e in extract(blocks):
+        for e in extract(blocks, name_map):
             tk = e["ticker"]
             if valid is not None and tk not in valid:
                 # 티커가 현재 TOP300 명단에 없으면 기록만 남기고 표시 (지도에선 매칭 안 됨)
