@@ -184,6 +184,17 @@ def main():
 
     items.sort(key=lambda x: x["date"], reverse=True)
     matched = sum(1 for x in items if valid is None or x["ticker"] in valid)
+
+    # 항목이 그대로면 재작성 안 함(updated 타임스탬프만 바뀌어 매일 커밋되는 것 방지)
+    if OUT.exists():
+        try:
+            prev = json.loads(OUT.read_text()).get("items", [])
+            if prev == items:
+                print(f"변경 없음: {len(items)}건 유지(지도 매칭 {matched}건)")
+                return
+        except Exception:
+            pass
+
     out = {
         "updated": time.strftime("%Y-%m-%d %H:%M KST"),
         "note": "라이브 '오늘의 기업'에서 다룬 기업 이력. fetch_todays_company.py가 회차 DB에서 추출.",
