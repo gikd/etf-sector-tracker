@@ -58,6 +58,26 @@
   .c-per b { color:var(--clay); font-weight:600; }
   .c-per .dot { opacity:.4; margin:0 2px; }
 
+  /* 라이브 '오늘의 기업' 연결 배지·이력 */
+  .tc-wrap { margin-top: 8px; }
+  .tc-chip { display:inline-flex; align-items:center; gap:4px; font-family:var(--sans); font-size:10.5px; font-weight:700;
+    color:var(--clay); background:rgba(var(--heat-pos),.12); border:1px solid var(--line); border-radius:999px;
+    padding:3px 8px; cursor:pointer; letter-spacing:.01em; }
+  .tc-chip:hover { border-color:var(--clay); }
+  .tc-chip .tc-caret { font-size:8px; transition:transform .12s; opacity:.7; }
+  .tc-chip.open .tc-caret { transform:rotate(180deg); }
+  .tc-panel { margin-top:7px; display:flex; flex-direction:column; gap:7px; }
+  .tc-item { font-family:var(--sans); font-size:11.5px; line-height:1.5; color:var(--ink);
+    border-left:2px solid var(--clay); padding:1px 0 1px 8px; }
+  .tc-item .tc-date { display:block; font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:1px; }
+  .tc-count { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--clay); flex-shrink:0; }
+  /* 묘수 다룸 뷰: 이력 항상 펼침, 카드 높이 자유 */
+  .live-grid { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); align-items:start; }
+  .live-card .tc-panel { margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
+  /* 모달 내 이력 */
+  .tc-modal { margin:14px 0 4px; }
+  .tc-modal-h { font-family:var(--sans); font-size:12.5px; font-weight:800; color:var(--clay); margin-bottom:8px; }
+
   /* 모바일: 카드 2열 + 막대 트랙 확보 */
   @media (max-width:560px) {
     .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
@@ -128,8 +148,10 @@ let DATA = null, period = "r1w";
 const MODES = [
   { key: "sector", label: "섹터" }, { key: "rs", label: "상대강도" },
   { key: "high", label: "신고가" }, { key: "low", label: "신저가" },
+  { key: "live", label: "묘수 다룸" },
 ];
 const MODE_KEYS = MODES.map(m => m.key);
+let TODAYS = {};   // ticker → { name, items:[{date,blurb}] } · 라이브 '오늘의 기업' 이력
 const HIGH_TH = -3, LOW_TH = 3;   // 52주 고점 −3% 이내 = 신고가권 · 저점 +3% 이내 = 신저가권
 let mode = "sector";
 try { const _m = localStorage.getItem("megacapMode"); if (MODE_KEYS.includes(_m)) mode = _m; } catch (e) {}
@@ -139,6 +161,36 @@ let universeN = 300;
 try { const _v = parseInt(localStorage.getItem("megacapN"), 10); if (UNIVERSES.includes(_v)) universeN = _v; } catch (e) {}
 let COMMENTARY_DAILY = {}, COMMENTARY_WEEKLY = {}, COMMENTARY_DATE = "";
 const byTicker = t => DATA.stocks.find(s => s.ticker === t);
+
+/* ── 라이브 '오늘의 기업' → 지도 연결 ── */
+function setTodays(d) {
+  TODAYS = {};
+  (d && d.items || []).forEach(e => {
+    if (!e.ticker) return;
+    (TODAYS[e.ticker] ||= { name: e.name || e.ticker, items: [] }).items.push({ date: e.date, blurb: e.blurb || "" });
+  });
+  Object.values(TODAYS).forEach(v => v.items.sort((a, b) => (a.date < b.date ? 1 : -1)));
+  if (DATA) renderAll();
+}
+function tcEsc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function tcItemsHTML(tk) {
+  const v = TODAYS[tk]; if (!v) return "";
+  return v.items.map(e => `<div class="tc-item"><span class="tc-date">${e.date}</span><span class="tc-blurb">${tcEsc(e.blurb)}</span></div>`).join("");
+}
+/* 카드용 접이식 배지(onclick은 모달 안 뜨게 전파 차단). open=펼친 채 시작 */
+function tcBadge(tk, open) {
+  const v = TODAYS[tk]; if (!v) return "";
+  return `<div class="tc-wrap">
+    <button class="tc-chip${open ? " open" : ""}" onclick="toggleTC(event,this)">📌 묘수 다룸 ${v.items.length}회<span class="tc-caret">▾</span></button>
+    <div class="tc-panel"${open ? "" : " hidden"}>${tcItemsHTML(tk)}</div>
+  </div>`;
+}
+window.toggleTC = function (ev, btn) {
+  ev.stopPropagation();
+  const panel = btn.parentNode.querySelector(".tc-panel");
+  if (panel) panel.hidden = !panel.hidden;
+  btn.classList.toggle("open");
+};
 
 function median(arr) {
   const a = arr.filter(x => x != null).sort((x, y) => x - y);
@@ -196,6 +248,7 @@ function rsCard(s, rankNum, med) {
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
     <div class="c-per"><span class="pl">중앙값 대비</span> <span class="${cls(delta)}" style="font-weight:600">${fmt(delta)}</span></div>
+    ${tcBadge(s.ticker)}
   </div>`;
 }
 
@@ -228,6 +281,36 @@ function hlCard(s, rankNum) {
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
     <div class="c-per"><span class="pl">52주 ${isHigh ? "고점" : "저점"}대비</span> <b>${distStr}</b></div>
+    ${tcBadge(s.ticker)}
+  </div>`;
+}
+
+/* 묘수 다룸: 라이브 '오늘의 기업'에서 다룬 기업만. 최근 다룬 순. 카드마다 이력 펼침 */
+function renderLive() {
+  const board = document.getElementById("board");
+  const rows = Object.keys(TODAYS).map(tk => ({
+    tk, name: TODAYS[tk].name, latest: TODAYS[tk].items[0] ? TODAYS[tk].items[0].date : "",
+    n: TODAYS[tk].items.length, st: byTicker(tk),
+  })).sort((a, b) => (a.latest < b.latest ? 1 : -1));
+  if (!rows.length) {
+    board.innerHTML = `<p class="note" style="padding:8px 0">아직 연결된 '오늘의 기업'이 없습니다.</p>`;
+    return;
+  }
+  board.innerHTML = `<div class="grid live-grid">${rows.map(liveCard).join("")}</div>`;
+}
+function liveCard(r) {
+  const s = r.st;
+  const nm = s ? s.name : r.name;
+  const sub = s
+    ? `${s.ticker} · ${s.sector}${s.rank ? ` · 시총 ${s.rank}위` : ""}`
+    : `${r.tk} · 현재 TOP300 외`;
+  const onclick = s ? ` onclick="openModal('${r.tk}')"` : "";
+  const px = s ? `<div class="c-px">${fmtPx(s.price, s.ccy)} <span class="${cls(s.r1d)}" style="font-size:11.5px">${fmt(s.r1d)}</span></div>` : "";
+  return `<div class="card live-card"${onclick}>
+    <div class="c-top"><span class="nm">${nm}</span><span class="tc-count">${r.n}회</span></div>
+    <div class="tk">${sub}</div>
+    ${px}
+    <div class="tc-panel tc-open">${tcItemsHTML(r.tk)}</div>
   </div>`;
 }
 
@@ -257,6 +340,7 @@ function card(s, isLead) {
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
     <div class="c-per"><span class="pl">올해</span> ${peNow} <span class="dot">·</span> <span class="pl">내년</span> <b>${peNext}</b></div>
+    ${tcBadge(s.ticker)}
   </div>`;
 }
 
@@ -297,6 +381,11 @@ function applyChrome() {
     title.textContent = "신저가 · 52주 저점 +3% 이내";
     sub.textContent = `저점에 근접한 종목 · 저점대비 0%에 가까운 순 · TOP${universeN}`;
     bars.style.display = "none";
+  } else if (mode === "live") {
+    const n = Object.keys(TODAYS).length;
+    title.textContent = "묘수가 다룬 기업";
+    sub.textContent = `라이브 '오늘의 기업'에서 다룬 ${n}개 · 최근 다룬 순 · 카드에 그동안의 해설 이력`;
+    bars.style.display = "none";
   } else {
     title.textContent = "섹터 강세 순위";
     sub.textContent = "섹터 내 종목들의 선택 기간 수익률 중앙값 순 · 막대 클릭 = 해당 섹터로 이동";
@@ -308,6 +397,7 @@ function renderAll() {
   if (!DATA) return;                  // 데이터 전엔 chrome만 (rs 복원 시 섹터 헤더/빈 막대 깜빡임 방지)
   if (mode === "rs") renderLeaders();
   else if (mode === "high" || mode === "low") renderHiLo();
+  else if (mode === "live") renderLive();
   else { renderBars(); renderBoard(); }
 }
 // 테마 토글 시 차트 색이 변수로 따라오지만, 안전하게 다시 그린다
@@ -353,6 +443,7 @@ function renderModal() {
     </div>
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
+    ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수 '오늘의 기업'에서 다룸 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker)}</div></div>` : ""}
     ${newsHTML(s)}`;
 }
 
@@ -369,6 +460,7 @@ fetch("megacap.json" + NOCACHE).then(r => r.json()).then(boot).catch(() => {
     `<p style="color:var(--down)">데이터를 불러올 수 없습니다.</p>`;
 });
 fetch("commentary.json" + NOCACHE).then(r => r.json()).then(setCommentary).catch(() => {});
+fetch("todays_company.json" + NOCACHE).then(r => r.json()).then(setTodays).catch(() => {});
 </script>
 </body>
 </html>
