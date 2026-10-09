@@ -120,7 +120,7 @@ def extract(page_blocks, name_map=None):
                 tk = parse_ticker(m.group(1))
                 if tk:
                     ticker = tk
-                    name = t[: m.start()].strip().rstrip("(（").strip() or _clean_name(t)
+                    name = t[: m.start()].strip().rstrip("(（").strip().lstrip(":：").strip() or _clean_name(t)
                     comp_idx = j
                     break
             if ticker:
@@ -197,7 +197,7 @@ def main():
 
     out = {
         "updated": time.strftime("%Y-%m-%d %H:%M KST"),
-        "note": "라이브 '오늘의 기업'에서 다룬 기업 이력. fetch_todays_company.py가 회차 DB에서 추출.",
+        "note": "라이브 '오늘의 기업'에서 짚은 기업 이력(묘수의 관점). fetch_todays_company.py가 회차 DB에서 추출.",
         "items": items,
     }
     OUT.write_text(json.dumps(out, ensure_ascii=False, indent=0), encoding="utf-8")

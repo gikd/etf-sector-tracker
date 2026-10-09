@@ -71,7 +71,7 @@
     border-left:2px solid var(--clay); padding:1px 0 1px 8px; }
   .tc-item .tc-date { display:block; font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:1px; }
   .tc-count { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--clay); flex-shrink:0; }
-  /* 묘수 다룸 뷰: 이력 항상 펼침, 카드 높이 자유 */
+  /* 묘수의 관점 뷰: 이력 항상 펼침, 카드 높이 자유 */
   .live-grid { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); align-items:start; }
   .live-card .tc-panel { margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
   /* 모달 내 이력 */
@@ -154,7 +154,7 @@ let DATA = null, period = "r1w";
 const MODES = [
   { key: "sector", label: "섹터" }, { key: "rs", label: "상대강도" },
   { key: "high", label: "신고가" }, { key: "low", label: "신저가" },
-  { key: "live", label: "묘수 다룸" },
+  { key: "live", label: "묘수의 관점" },
 ];
 const MODE_KEYS = MODES.map(m => m.key);
 let TODAYS = {};   // ticker → { name, items:[{date,blurb}] } · 라이브 '오늘의 기업' 이력
@@ -187,7 +187,7 @@ function tcItemsHTML(tk) {
 function tcBadge(tk, open) {
   const v = TODAYS[tk]; if (!v) return "";
   return `<div class="tc-wrap">
-    <button class="tc-chip${open ? " open" : ""}" onclick="toggleTC(event,this)">📌 묘수 다룸 ${v.items.length}회<span class="tc-caret">▾</span></button>
+    <button class="tc-chip${open ? " open" : ""}" onclick="toggleTC(event,this)">📌 묘수의 관점 ${v.items.length}회<span class="tc-caret">▾</span></button>
     <div class="tc-panel"${open ? "" : " hidden"}>${tcItemsHTML(tk)}</div>
   </div>`;
 }
@@ -291,7 +291,7 @@ function hlCard(s, rankNum) {
   </div>`;
 }
 
-/* 묘수 다룸: 라이브 '오늘의 기업'에서 다룬 기업만. 최근 다룬 순. 카드마다 이력 펼침 */
+/* 묘수의 관점: 라이브 '오늘의 기업'에서 짚은 기업만. 최근 순. 카드마다 이력 펼침 */
 function renderLive() {
   const board = document.getElementById("board");
   const rows = Object.keys(TODAYS).map(tk => ({
@@ -389,8 +389,8 @@ function applyChrome() {
     bars.style.display = "none";
   } else if (mode === "live") {
     const n = Object.keys(TODAYS).length;
-    title.textContent = "묘수가 다룬 기업";
-    sub.textContent = `라이브 '오늘의 기업'에서 다룬 ${n}개 · 최근 다룬 순 · 카드에 그동안의 해설 이력`;
+    title.textContent = "묘수의 관점";
+    sub.textContent = `라이브 '오늘의 기업'에서 짚은 ${n}개 기업 · 최근 순 · 카드마다 그동안의 관점`;
     bars.style.display = "none";
   } else {
     title.textContent = "섹터 강세 순위";
@@ -424,7 +424,7 @@ function setCommentary(c) {
   if (DATA) renderAll();   // mode-aware: rs 모드에선 RS 그리드가 섹터 뷰로 덮이지 않게
 }
 
-// 티커 → 트레이딩뷰 차트 URL (접미사로 거래소 매핑, 미국주는 심볼만 — TV가 거래소 자동 해석)
+// 티커 → 트레이딩뷰 차트 URL (접미사로 거래소 매핑, 미국주는 심볼만, TV가 거래소 자동 해석)
 function tvUrl(tk) {
   const EX = { T:"TSE", HK:"HKEX", PA:"EURONEXT", AX:"ASX", KS:"KRX", DE:"XETR",
     MC:"BME", MI:"MIL", NS:"NSE", SR:"TADAWUL", SW:"SIX", TO:"TSX", TW:"TWSE" };
@@ -460,7 +460,7 @@ function renderModal() {
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
     <div class="tv-row"><a class="tv-btn" href="${tvUrl(s.ticker)}" target="_blank" rel="noopener noreferrer" title="트레이딩뷰에서 차트 보기">트레이딩뷰에서 보기 ↗</a></div>
-    ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수 '오늘의 기업'에서 다룸 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker)}</div></div>` : ""}
+    ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수의 관점 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker)}</div></div>` : ""}
     ${newsHTML(s)}`;
 }
 

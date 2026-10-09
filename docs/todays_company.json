@@ -1,6 +1,6 @@
 {
 "updated": "2026-10-09 11:16 KST",
-"note": "라이브 '오늘의 기업'에서 다룬 기업 이력. fetch_todays_company.py가 회차 DB에서 추출.",
+"note": "라이브 '오늘의 기업'에서 짚은 기업 이력(묘수의 관점). fetch_todays_company.py가 회차 DB에서 추출.",
 "items": [
 {
 "ticker": "ABBN",
@@ -178,7 +178,7 @@
 },
 {
 "ticker": "SU.PA",
-"name": ": 슈나이더 일렉트릭",
+"name": "슈나이더 일렉트릭",
 "date": "2026-08-07",
 "blurb": "대포를 팔던 회사가 AI의 전기를 팝니다"
 },
