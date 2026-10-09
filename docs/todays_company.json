@@ -1,13 +1,7 @@
 {
-"updated": "2026-10-09 09:33 KST",
+"updated": "2026-10-09 11:16 KST",
 "note": "라이브 '오늘의 기업'에서 다룬 기업 이력. fetch_todays_company.py가 회차 DB에서 추출.",
 "items": [
-{
-"ticker": "VLO",
-"name": "발레로",
-"date": "2026-10-09",
-"blurb": "2022년 전쟁 고점의 3배까지 왔고, 처음 떠오른 질문은 '전쟁 유가가 유지되나'였습니다"
-},
 {
 "ticker": "ABBN",
 "name": "ABB",
