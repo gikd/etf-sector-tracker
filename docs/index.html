@@ -83,6 +83,12 @@
     color:var(--muted); border-radius:999px; padding:5px 14px; font-size:12px; font-weight:700; font-family:var(--sans);
     letter-spacing:.02em; text-decoration:none; transition:all .18s; white-space:nowrap; }
   .tv-btn:hover { border-color:var(--clay); color:var(--clay); }
+  .tv-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .tv-btn.rs { border-color:var(--clay); color:var(--clay); }
+  .tv-btn.rs:hover { background:var(--clay); color:var(--card); }
+  /* 이력 끝 '8단계 리서치' 링크 (멤버 전용 페이지로) */
+  .rs-link { display:inline-block; margin-top:2px; font-family:var(--sans); font-size:11.5px; font-weight:700; color:var(--clay); text-decoration:none; }
+  .rs-link:hover { text-decoration:underline; }
 
   /* 모바일: 카드 2열 + 막대 트랙 확보 */
   @media (max-width:560px) {
@@ -158,6 +164,8 @@ const MODES = [
 ];
 const MODE_KEYS = MODES.map(m => m.key);
 let TODAYS = {};   // ticker → { name, items:[{date,blurb}] } · 라이브 '오늘의 기업' 이력
+let RESEARCH = {}; // ticker → slug · myosuview.com 멤버 전용 8단계 리서치(공개분만)
+const RESEARCH_BASE = "https://myosuview.com/research/";
 const HIGH_TH = -3, LOW_TH = 3;   // 52주 고점 −3% 이내 = 신고가권 · 저점 +3% 이내 = 신저가권
 let mode = "sector";
 try { const _m = localStorage.getItem("megacapMode"); if (MODE_KEYS.includes(_m)) mode = _m; } catch (e) {}
@@ -178,10 +186,18 @@ function setTodays(d) {
   Object.values(TODAYS).forEach(v => v.items.sort((a, b) => (a.date < b.date ? 1 : -1)));
   if (DATA) renderAll();
 }
+function setResearch(d) {
+  RESEARCH = {};
+  (d && d.items || []).forEach(e => { if (e.ticker && e.slug) RESEARCH[e.ticker] = e.slug; });
+  if (DATA) renderAll();
+}
+const rsUrl = tk => RESEARCH_BASE + encodeURIComponent(RESEARCH[tk]);
 function tcEsc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-function tcItemsHTML(tk) {
+function tcItemsHTML(tk, withLink = true) {
   const v = TODAYS[tk]; if (!v) return "";
-  return v.items.map(e => `<div class="tc-item"><span class="tc-date">${e.date}</span><span class="tc-blurb">${tcEsc(e.blurb)}</span></div>`).join("");
+  const link = withLink && RESEARCH[tk]
+    ? `<a class="rs-link" href="${rsUrl(tk)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">8단계 리서치 읽기 ↗ (멤버)</a>` : "";
+  return v.items.map(e => `<div class="tc-item"><span class="tc-date">${e.date}</span><span class="tc-blurb">${tcEsc(e.blurb)}</span></div>`).join("") + link;
 }
 /* 카드용 접이식 배지(onclick은 모달 안 뜨게 전파 차단). open=펼친 채 시작 */
 function tcBadge(tk, open) {
@@ -459,8 +475,8 @@ function renderModal() {
     </div>
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
-    <div class="tv-row"><a class="tv-btn" href="${tvUrl(s.ticker)}" target="_blank" rel="noopener noreferrer" title="트레이딩뷰에서 차트 보기">트레이딩뷰에서 보기 ↗</a></div>
-    ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수의 관점 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker)}</div></div>` : ""}
+    <div class="tv-row"><a class="tv-btn" href="${tvUrl(s.ticker)}" target="_blank" rel="noopener noreferrer" title="트레이딩뷰에서 차트 보기">트레이딩뷰에서 보기 ↗</a>${RESEARCH[s.ticker] ? `<a class="tv-btn rs" href="${rsUrl(s.ticker)}" target="_blank" rel="noopener" title="묘수 멤버 전용 8단계 기업 리서치">8단계 리서치 읽기 ↗</a>` : ""}</div>
+    ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수의 관점 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker, false)}</div></div>` : ""}
     ${newsHTML(s)}`;
 }
 
@@ -478,6 +494,7 @@ fetch("megacap.json" + NOCACHE).then(r => r.json()).then(boot).catch(() => {
 });
 fetch("commentary.json" + NOCACHE).then(r => r.json()).then(setCommentary).catch(() => {});
 fetch("todays_company.json" + NOCACHE).then(r => r.json()).then(setTodays).catch(() => {});
+fetch("https://myosuview.com/api/research-index").then(r => r.json()).then(setResearch).catch(() => {});
 </script>
 </body>
 </html>
