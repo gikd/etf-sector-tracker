@@ -3,7 +3,7 @@
 "note": "라이브 '오늘의 기업'에서 짚은 기업 이력(묘수의 관점). fetch_todays_company.py가 회차 DB에서 추출.",
 "items": [
 {
-"ticker": "ABBN",
+"ticker": "ABBN.SW",
 "name": "ABB",
 "date": "2026-10-08",
 "blurb": "1. ABB는 건물과 공장 안에서 전기를 나누고, 돌리고, 조절하는 장비를 파는 회사"

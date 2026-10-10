@@ -171,8 +171,11 @@ def main():
         for e in extract(blocks, name_map):
             tk = e["ticker"]
             if valid is not None and tk not in valid:
-                # 티커가 현재 TOP300 명단에 없으면 기록만 남기고 표시 (지도에선 매칭 안 됨)
-                pass
+                # 거래소 접미사를 빼고 적은 경우(ABBN → ABBN.SW)는 명단의 티커로 맞춘다.
+                # 그래도 없으면 TOP300 밖이라 그대로 둔다(지도에선 매칭 안 됨)
+                alias = [v for v in valid if v.split(".")[0] == tk]
+                if len(alias) == 1:
+                    tk = alias[0]
             key = (pg["date"], tk)
             if key in seen:
                 continue

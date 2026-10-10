@@ -186,9 +186,13 @@ function setTodays(d) {
   Object.values(TODAYS).forEach(v => v.items.sort((a, b) => (a.date < b.date ? 1 : -1)));
   if (DATA) renderAll();
 }
+let RS_RAW = null;
 function setResearch(d) {
+  RS_RAW = d;
   RESEARCH = {};
   (d && d.items || []).forEach(e => { if (e.ticker && e.slug) RESEARCH[e.ticker] = e.slug; });
+  // 리서치 쪽이 거래소 접미사 없이 적은 티커(ABBN)를 지도 티커(ABBN.SW)로도 찾게 한다
+  if (DATA) DATA.stocks.forEach(s => { const b = s.ticker.split(".")[0]; if (!RESEARCH[s.ticker] && b !== s.ticker && RESEARCH[b]) RESEARCH[s.ticker] = RESEARCH[b]; });
   if (DATA) renderAll();
 }
 const rsUrl = tk => RESEARCH_BASE + encodeURIComponent(RESEARCH[tk]);
@@ -482,6 +486,7 @@ function renderModal() {
 
 function boot(d) {
   DATA = d;
+  if (RS_RAW) setResearch(RS_RAW);   // 리서치 목록이 먼저 왔으면 지도 티커 별칭을 다시 건다
   const uni = d.universe_updated ? ` · 명단 ${d.universe_updated.slice(0, 10)} 기준(주 1회)` : "";
   document.getElementById("updated").textContent = `시세 ${d.updated} · ${d.count}종목${uni}`;
   renderAll();
