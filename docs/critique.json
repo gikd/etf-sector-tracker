@@ -1,0 +1,204 @@
+{
+ "updated": "2026-10-15",
+ "notice": "한줄평이나 별점은 주식 투자의 적시성을 절대 보장하지 않습니다. 매수·매도 조언이 아니며, 비즈니스 모델에 대한 개인적인 평가일 뿐입니다.",
+ "items": [
+  {
+   "ticker": "DHR",
+   "name": "다나허",
+   "line": "약을 만드는 공장의 곡괭이 장수",
+   "stars": 3
+  },
+  {
+   "ticker": "VLO",
+   "name": "발레로",
+   "line": "정제 사이클은 지금이니",
+   "stars": 2.5
+  },
+  {
+   "ticker": "ABBN.SW",
+   "name": "ABB",
+   "line": "아쉬운 사업부들, 확실한 먹거리들",
+   "stars": 3
+  },
+  {
+   "ticker": "AMD",
+   "name": "AMD",
+   "line": "AI의 두뇌를 책임지는 패스트팔로워",
+   "stars": 3.5
+  },
+  {
+   "ticker": "JCI",
+   "name": "존슨컨트롤스",
+   "line": "열관리는 더욱 중요해지게 된다",
+   "stars": 3.5
+  },
+  {
+   "ticker": "META",
+   "name": "메타",
+   "line": "AI는 즐거워야 한다",
+   "stars": 4
+  },
+  {
+   "ticker": "NVDA",
+   "name": "엔비디아",
+   "line": "AI 시대의 콜롬버스",
+   "stars": 4.5
+  },
+  {
+   "ticker": "EMR",
+   "name": "에머슨",
+   "line": "하드웨어 기반의 소프트웨어 확장",
+   "stars": 3
+  },
+  {
+   "ticker": "DE",
+   "name": "디어",
+   "line": "피지컬 AI가 가장 먼저 다가올 곳",
+   "stars": 4
+  },
+  {
+   "ticker": "TMO",
+   "name": "써모피셔",
+   "line": "임상 실험이 병목이라면",
+   "stars": 3.5
+  },
+  {
+   "ticker": "INTC",
+   "name": "인텔",
+   "line": "미국이라는 뒷배, 제조의 시대",
+   "stars": 3
+  },
+  {
+   "ticker": "8031.T",
+   "name": "미쓰이물산",
+   "line": "아무나 삽을 들 수 있는 게 아니다",
+   "stars": 4
+  },
+  {
+   "ticker": "ISRG",
+   "name": "인튜이티브서지컬",
+   "line": "기술과 싸워야 하는 선두주자",
+   "stars": 2.5
+  },
+  {
+   "ticker": "QCOM",
+   "name": "퀄컴",
+   "line": "애플이 떠난 자리, 디바이스의 기회?",
+   "stars": 3
+  },
+  {
+   "ticker": "CSL.AX",
+   "name": "CSL",
+   "line": "사람은 잘하는 거 해야 해",
+   "stars": 3.5
+  },
+  {
+   "ticker": "PSX",
+   "name": "필립스66",
+   "line": "에너지 시대를 과소평가하지 말 것",
+   "stars": 2.5
+  },
+  {
+   "ticker": "APH",
+   "name": "암페놀",
+   "line": "구리, 광, 전력의 삼도류. 커넥터 왕좌",
+   "stars": 3
+  },
+  {
+   "ticker": "FCX",
+   "name": "프리포트맥모란",
+   "line": "구리의 왕",
+   "stars": 3.5
+  },
+  {
+   "ticker": "AAPL",
+   "name": "애플",
+   "line": "로컬 연산 시대가 열게 될 새로운 사용자 접점",
+   "stars": 4.5
+  },
+  {
+   "ticker": "ORCL",
+   "name": "오라클",
+   "line": "회사의 운명을 건 필사적인 도전, 응원합니다",
+   "stars": 2.5
+  },
+  {
+   "ticker": "SPCX",
+   "name": "스페이스X",
+   "line": "새로운 프론티어가 우주가 되는 그날까지, AI 3강 체제를 향해",
+   "stars": 4
+  },
+  {
+   "ticker": "BN",
+   "name": "브룩필드",
+   "line": "지금 AI가 돈이 병목이라면, 해결사가 여기 있다.",
+   "stars": 3.5
+  },
+  {
+   "ticker": "ABT",
+   "name": "애보트",
+   "line": "구글과 협업으로 사용자를 확장할 수 있을까",
+   "stars": 3.5
+  },
+  {
+   "ticker": "REGN",
+   "name": "리제네론",
+   "line": "분명 언젠가는 배를 바꾸어 타야 할 것",
+   "stars": 2.5
+  },
+  {
+   "ticker": "GOOGL",
+   "name": "알파벳",
+   "line": "바이오 회사. 허사비스를 믿는다면",
+   "stars": 4.5
+  },
+  {
+   "ticker": "BDX",
+   "name": "벡톤디킨슨",
+   "line": "끊기 힘든 과거의 반복 매출, 변화하는 시대",
+   "stars": 2.5
+  },
+  {
+   "ticker": "SU.PA",
+   "name": "슈나이더일렉트릭",
+   "line": "하드웨어 기반의 소프트웨어 확장. 생각보다 든든할 지도.",
+   "stars": 3
+  },
+  {
+   "ticker": "6857.T",
+   "name": "어드밴테스트",
+   "line": "길게 보면 한철장사지만.. 많아지는 칩, 추론 최적화, 증설 사이클까지.",
+   "stars": 3.5
+  },
+  {
+   "ticker": "EQNR",
+   "name": "에퀴노르",
+   "line": "바람개비 내려놓고 가스 가스 가스",
+   "stars": 3
+  },
+  {
+   "ticker": "3690.HK",
+   "name": "메이투안",
+   "line": "국가가 이익을 정하지만 사용자 접점의 강력함도",
+   "stars": 3.5
+  },
+  {
+   "ticker": "ACN",
+   "name": "액센츄어",
+   "line": "AX 사이클을 호재로 만들어낼 수 있을까?",
+   "stars": 2.5
+  },
+  {
+   "ticker": "BABA",
+   "name": "알리바바",
+   "line": "클라우드의 성장을 보며 돈버는 시기를 기다리자",
+   "stars": 3.5
+  },
+  {
+   "ticker": "PYPL",
+   "name": "페이팔",
+   "line": "에이전트와 싸워야 하는 결제 시장",
+   "stars": 3
+  }
+ ]
+}

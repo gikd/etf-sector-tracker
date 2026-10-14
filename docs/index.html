@@ -58,25 +58,24 @@
   .c-per b { color:var(--clay); font-weight:600; }
   .c-per .dot { opacity:.4; margin:0 2px; }
 
-  /* 라이브 '오늘의 기업' 연결 배지·이력 */
-  .tc-wrap { margin-top: 8px; }
-  .tc-chip { display:inline-flex; align-items:center; gap:4px; font-family:var(--sans); font-size:10.5px; font-weight:700;
-    color:var(--clay); background:rgba(var(--heat-pos),.12); border:1px solid var(--line); border-radius:999px;
-    padding:3px 8px; cursor:pointer; letter-spacing:.01em; }
-  .tc-chip:hover { border-color:var(--clay); }
-  .tc-chip .tc-caret { font-size:8px; transition:transform .12s; opacity:.7; }
-  .tc-chip.open .tc-caret { transform:rotate(180deg); }
-  .tc-panel { margin-top:7px; display:flex; flex-direction:column; gap:7px; }
-  .tc-item { font-family:var(--sans); font-size:11.5px; line-height:1.5; color:var(--ink);
-    border-left:2px solid var(--clay); padding:1px 0 1px 8px; }
-  .tc-item .tc-date { display:block; font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:1px; }
-  .tc-count { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--clay); flex-shrink:0; }
-  /* 묘수의 관점 뷰: 이력 항상 펼침, 카드 높이 자유 */
+  /* 묘수의 관점: 한줄평 + 비즈니스모델 별점 */
+  .cr { margin-top:9px; padding-top:8px; border-top:1px solid var(--line); }
+  .cr-stars { display:flex; align-items:center; gap:6px; }
+  .stars { position:relative; display:inline-block; font-size:12.5px; letter-spacing:1px; line-height:1; color:var(--line-strong); }
+  .stars::before { content:"★★★★★"; }
+  .stars i { position:absolute; left:0; top:0; overflow:hidden; white-space:nowrap; color:var(--clay); font-style:normal; }
+  .stars i::before { content:"★★★★★"; }
+  .cr-num { font-family:var(--mono); font-size:11px; font-weight:600; color:var(--clay); }
+  .cr-line { font-family:var(--serif); font-size:13px; line-height:1.55; color:var(--ink); margin-top:5px; word-break:keep-all; }
+  .card .cr-line { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:12px; }
+  .card.live-card .cr-line { -webkit-line-clamp:unset; display:block; font-size:14px; }
   .live-grid { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); align-items:start; }
-  .live-card .tc-panel { margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
-  /* 모달 내 이력 */
-  .tc-modal { margin:14px 0 4px; }
-  .tc-modal-h { font-family:var(--sans); font-size:12.5px; font-weight:800; color:var(--clay); margin-bottom:8px; }
+  .cr-notice { font-family:var(--sans); font-size:12px; line-height:1.7; color:var(--muted); border:1px solid var(--line);
+    border-left:2px solid var(--clay); border-radius:6px; padding:9px 13px; margin:0 0 14px; max-width:880px; }
+  .cr-modal { margin:14px 0 4px; }
+  .cr-modal-h { font-family:var(--sans); font-size:12.5px; font-weight:800; color:var(--clay); margin-bottom:6px; }
+  .cr-modal .cr-line { font-size:16px; }
+  .cr-modal .cr-notice { margin:10px 0 0; font-size:11px; }
   /* 트레이딩뷰 바로가기 (차트 아래) */
   .tv-row { margin:10px 0 2px; }
   .tv-btn { display:inline-flex; align-items:center; gap:6px; background:transparent; border:1.5px solid var(--line-strong);
@@ -86,8 +85,8 @@
   .tv-row { display:flex; gap:8px; flex-wrap:wrap; }
   .tv-btn.rs { border-color:var(--clay); color:var(--clay); }
   .tv-btn.rs:hover { background:var(--clay); color:var(--card); }
-  /* 이력 끝 '8단계 리서치' 링크 (멤버 전용 페이지로) */
-  .rs-link { display:inline-block; margin-top:2px; font-family:var(--sans); font-size:11.5px; font-weight:700; color:var(--clay); text-decoration:none; }
+  /* 카드 끝 '8단계 리서치' 링크 (멤버 전용 페이지로) */
+  .rs-link { display:inline-block; margin-top:6px; font-family:var(--sans); font-size:11.5px; font-weight:700; color:var(--clay); text-decoration:none; }
   .rs-link:hover { text-decoration:underline; }
 
   /* 모바일: 카드 2열 + 막대 트랙 확보 */
@@ -163,7 +162,7 @@ const MODES = [
   { key: "live", label: "묘수의 관점" },
 ];
 const MODE_KEYS = MODES.map(m => m.key);
-let TODAYS = {};   // ticker → { name, items:[{date,blurb}] } · 라이브 '오늘의 기업' 이력
+let CRITIQUE = {}, CRITIQUE_ORDER = [], CRITIQUE_NOTICE = "";   // ticker → { name, line, stars } · 묘수의 한줄평·비즈니스모델 별점
 let RESEARCH = {}; // ticker → slug · myosuview.com 멤버 전용 8단계 리서치(공개분만)
 const RESEARCH_BASE = "https://myosuview.com/research/";
 const HIGH_TH = -3, LOW_TH = 3;   // 52주 고점 −3% 이내 = 신고가권 · 저점 +3% 이내 = 신저가권
@@ -176,14 +175,15 @@ try { const _v = parseInt(localStorage.getItem("megacapN"), 10); if (UNIVERSES.i
 let COMMENTARY_DAILY = {}, COMMENTARY_WEEKLY = {}, COMMENTARY_DATE = "";
 const byTicker = t => DATA.stocks.find(s => s.ticker === t);
 
-/* ── 라이브 '오늘의 기업' → 지도 연결 ── */
-function setTodays(d) {
-  TODAYS = {};
+/* ── 묘수의 관점: 한줄평 + 비즈니스모델 별점 (critique.json, 동준님이 직접 씀) ── */
+function setCritique(d) {
+  CRITIQUE = {}; CRITIQUE_ORDER = [];
+  CRITIQUE_NOTICE = (d && d.notice) || "";
   (d && d.items || []).forEach(e => {
-    if (!e.ticker) return;
-    (TODAYS[e.ticker] ||= { name: e.name || e.ticker, items: [] }).items.push({ date: e.date, blurb: e.blurb || "" });
+    if (!e.ticker || !e.line) return;
+    CRITIQUE[e.ticker] = { name: e.name || e.ticker, line: e.line, stars: e.stars };
+    CRITIQUE_ORDER.push(e.ticker);
   });
-  Object.values(TODAYS).forEach(v => v.items.sort((a, b) => (a.date < b.date ? 1 : -1)));
   if (DATA) renderAll();
 }
 let RS_RAW = null;
@@ -197,26 +197,19 @@ function setResearch(d) {
 }
 const rsUrl = tk => RESEARCH_BASE + encodeURIComponent(RESEARCH[tk]);
 function tcEsc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-function tcItemsHTML(tk, withLink = true) {
-  const v = TODAYS[tk]; if (!v) return "";
+function starsHTML(n) {
+  if (n == null) return "";
+  const w = Math.max(0, Math.min(5, n)) / 5 * 100;
+  return `<span class="cr-stars"><span class="stars" aria-label="별점 ${n}점"><i style="width:${w}%"></i></span><span class="cr-num">${Number(n).toFixed(1)}</span></span>`;
+}
+/* 카드 아래 한줄평. withLink = 멤버 리서치 링크까지 */
+function crBlock(tk, withLink = false) {
+  const v = CRITIQUE[tk]; if (!v) return "";
   const link = withLink && RESEARCH[tk]
     ? `<a class="rs-link" href="${rsUrl(tk)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">8단계 리서치 읽기 ↗ (멤버)</a>` : "";
-  return v.items.map(e => `<div class="tc-item"><span class="tc-date">${e.date}</span><span class="tc-blurb">${tcEsc(e.blurb)}</span></div>`).join("") + link;
+  return `<div class="cr">${starsHTML(v.stars)}<div class="cr-line">${tcEsc(v.line)}</div>${link}</div>`;
 }
-/* 카드용 접이식 배지(onclick은 모달 안 뜨게 전파 차단). open=펼친 채 시작 */
-function tcBadge(tk, open) {
-  const v = TODAYS[tk]; if (!v) return "";
-  return `<div class="tc-wrap">
-    <button class="tc-chip${open ? " open" : ""}" onclick="toggleTC(event,this)">📌 묘수의 관점 ${v.items.length}회<span class="tc-caret">▾</span></button>
-    <div class="tc-panel"${open ? "" : " hidden"}>${tcItemsHTML(tk)}</div>
-  </div>`;
-}
-window.toggleTC = function (ev, btn) {
-  ev.stopPropagation();
-  const panel = btn.parentNode.querySelector(".tc-panel");
-  if (panel) panel.hidden = !panel.hidden;
-  btn.classList.toggle("open");
-};
+function crNotice() { return CRITIQUE_NOTICE ? `<div class="cr-notice">${tcEsc(CRITIQUE_NOTICE)}</div>` : ""; }
 
 function median(arr) {
   const a = arr.filter(x => x != null).sort((x, y) => x - y);
@@ -274,7 +267,7 @@ function rsCard(s, rankNum, med) {
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
     <div class="c-per"><span class="pl">중앙값 대비</span> <span class="${cls(delta)}" style="font-weight:600">${fmt(delta)}</span></div>
-    ${tcBadge(s.ticker)}
+    ${crBlock(s.ticker)}
   </div>`;
 }
 
@@ -307,36 +300,25 @@ function hlCard(s, rankNum) {
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
     <div class="c-per"><span class="pl">52주 ${isHigh ? "고점" : "저점"}대비</span> <b>${distStr}</b></div>
-    ${tcBadge(s.ticker)}
+    ${crBlock(s.ticker)}
   </div>`;
 }
 
-/* 묘수의 관점: 라이브 '오늘의 기업'에서 짚은 기업만. 최근 순. 카드마다 이력 펼침 */
+/* 묘수의 관점: 한줄평·별점을 단 기업만. 라이브에서 다룬 최근 순 */
 function renderLive() {
   const board = document.getElementById("board");
-  const rows = Object.keys(TODAYS).map(tk => ({
-    tk, name: TODAYS[tk].name, latest: TODAYS[tk].items[0] ? TODAYS[tk].items[0].date : "",
-    n: TODAYS[tk].items.length, st: byTicker(tk),
-  })).sort((a, b) => (a.latest < b.latest ? 1 : -1));
+  const rows = CRITIQUE_ORDER.map(byTicker).filter(Boolean);
   if (!rows.length) {
-    board.innerHTML = `<p class="note" style="padding:8px 0">아직 연결된 '오늘의 기업'이 없습니다.</p>`;
+    board.innerHTML = `<p class="note" style="padding:8px 0">아직 한줄평이 없습니다.</p>`;
     return;
   }
-  board.innerHTML = `<div class="grid live-grid">${rows.map(liveCard).join("")}</div>`;
+  board.innerHTML = crNotice() + `<div class="grid live-grid">${rows.map(liveCard).join("")}</div>`;
 }
-function liveCard(r) {
-  const s = r.st;
-  const nm = s ? s.name : r.name;
-  const sub = s
-    ? `${s.ticker} · ${s.sector}${s.rank ? ` · 시총 ${s.rank}위` : ""}`
-    : `${r.tk} · 현재 TOP300 외`;
-  const onclick = s ? ` onclick="openModal('${r.tk}')"` : "";
-  const px = s ? `<div class="c-px">${fmtPx(s.price, s.ccy)} <span class="${cls(s.r1d)}" style="font-size:11.5px">${fmt(s.r1d)}</span></div>` : "";
-  return `<div class="card live-card"${onclick}>
-    <div class="c-top"><span class="nm">${nm}</span><span class="tc-count">${r.n}회</span></div>
-    <div class="tk">${sub}</div>
-    ${px}
-    <div class="tc-panel tc-open">${tcItemsHTML(r.tk)}</div>
+function liveCard(s) {
+  return `<div class="card live-card" onclick="openModal('${s.ticker}')">
+    <div class="c-top"><span class="nm">${s.name}</span><span class="today ${cls(s.r1d)}">${fmt(s.r1d)}</span></div>
+    <div class="tk">${s.ticker} · ${s.sector}${s.rank ? ` · 시총 ${s.rank}위` : ""}</div>
+    ${crBlock(s.ticker, true)}
   </div>`;
 }
 
@@ -366,7 +348,7 @@ function card(s, isLead) {
     ${spark(s.candles ? s.candles.c.slice(-42) : s.spark)}
     <div class="c-px">${fmtPx(s.price, s.ccy)}</div>
     <div class="c-per"><span class="pl">올해</span> ${peNow} <span class="dot">·</span> <span class="pl">내년</span> <b>${peNext}</b></div>
-    ${tcBadge(s.ticker)}
+    ${crBlock(s.ticker)}
   </div>`;
 }
 
@@ -408,9 +390,9 @@ function applyChrome() {
     sub.textContent = `저점에 근접한 종목 · 저점대비 0%에 가까운 순 · TOP${universeN}`;
     bars.style.display = "none";
   } else if (mode === "live") {
-    const n = Object.keys(TODAYS).length;
+    const n = CRITIQUE_ORDER.length;
     title.textContent = "묘수의 관점";
-    sub.textContent = `라이브 '오늘의 기업'에서 짚은 ${n}개 기업 · 최근 순 · 카드마다 그동안의 관점`;
+    sub.textContent = `한줄평과 비즈니스모델 별점 · ${n}개 기업 · 라이브에서 다룬 최근 순 · 별점은 주가가 아니라 사업 모델에 매깁니다`;
     bars.style.display = "none";
   } else {
     title.textContent = "섹터 강세 순위";
@@ -480,7 +462,7 @@ function renderModal() {
     <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
     ${candleSVG(s, modalWin + 1)}
     <div class="tv-row"><a class="tv-btn" href="${tvUrl(s.ticker)}" target="_blank" rel="noopener noreferrer" title="트레이딩뷰에서 차트 보기">트레이딩뷰에서 보기 ↗</a>${RESEARCH[s.ticker] ? `<a class="tv-btn rs" href="${rsUrl(s.ticker)}" target="_blank" rel="noopener" title="묘수 멤버 전용 8단계 기업 리서치">8단계 리서치 읽기 ↗</a>` : ""}</div>
-    ${TODAYS[s.ticker] ? `<div class="tc-modal"><div class="tc-modal-h">📌 묘수의 관점 · ${TODAYS[s.ticker].items.length}회</div><div class="tc-panel tc-open">${tcItemsHTML(s.ticker, false)}</div></div>` : ""}
+    ${CRITIQUE[s.ticker] ? `<div class="cr-modal"><div class="cr-modal-h">묘수의 관점 · 한줄평과 비즈니스모델 별점</div>${starsHTML(CRITIQUE[s.ticker].stars)}<div class="cr-line">${tcEsc(CRITIQUE[s.ticker].line)}</div>${crNotice()}</div>` : ""}
     ${newsHTML(s)}`;
 }
 
@@ -498,7 +480,7 @@ fetch("megacap.json" + NOCACHE).then(r => r.json()).then(boot).catch(() => {
     `<p style="color:var(--down)">데이터를 불러올 수 없습니다.</p>`;
 });
 fetch("commentary.json" + NOCACHE).then(r => r.json()).then(setCommentary).catch(() => {});
-fetch("todays_company.json" + NOCACHE).then(r => r.json()).then(setTodays).catch(() => {});
+fetch("critique.json" + NOCACHE).then(r => r.json()).then(setCritique).catch(() => {});
 fetch("https://myosuview.com/api/research-index").then(r => r.json()).then(setResearch).catch(() => {});
 </script>
 </body>
