@@ -36,5 +36,9 @@ jobs:
             echo "변경 없음 — 커밋 생략"; exit 0
           fi
           git commit -m "data: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') KST 갱신"
-          git pull --rebase -X ours origin main
-          git push
+          # GitHub 쪽 일시 오류(push 500)로 실패 메일이 가지 않게 세 번까지 다시 시도
+          for i in 1 2 3; do
+            git pull --rebase -X ours origin main && git push && exit 0
+            echo "푸시 실패 ${i}회 — 15초 뒤 재시도"; sleep 15
+          done
+          exit 1
