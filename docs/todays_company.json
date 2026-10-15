@@ -1,7 +1,13 @@
 {
-"updated": "2026-10-14 09:33 KST",
+"updated": "2026-10-15 09:34 KST",
 "note": "라이브 '오늘의 기업'에서 짚은 기업 이력(묘수의 관점). fetch_todays_company.py가 회차 DB에서 추출.",
 "items": [
+{
+"ticker": "MSFT",
+"name": "마이크로소프트",
+"date": "2026-10-15",
+"blurb": "소프트웨어를 팔던 회사가 발전소처럼 돈을 먼저 묻고 있습니다"
+},
 {
 "ticker": "DHR",
 "name": "다나허",
