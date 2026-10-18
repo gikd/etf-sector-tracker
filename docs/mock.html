@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모의투자 · 메가캡 300</title>
+<script>document.documentElement.className=(function(){try{return localStorage.getItem("etf-theme")||"theme-dark"}catch(e){return "theme-dark"}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Staatliches&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css?v=260901">
+<style>
+  /* 모의투자 전용 컴포넌트 (공통은 theme.css) */
+  .mk-notice { font-family:var(--sans); font-size:12.5px; line-height:1.7; color:var(--muted); border:1px solid var(--line);
+    border-left:2px solid var(--clay); border-radius:6px; padding:10px 14px; margin:0 0 18px; max-width:880px; }
+  .mk-notice b { color:var(--ink); font-weight:700; }
+
+  .sum { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
+  .sum .box { background:var(--card); border:1px solid var(--line); border-radius:var(--card-radius); padding:12px 14px; }
+  .sum .lbl { font-size:11px; color:var(--muted); letter-spacing:.02em; }
+  .sum .val { font-family:var(--mono); font-size:19px; font-weight:600; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .sum .sub { font-family:var(--mono); font-size:11.5px; margin-top:2px; color:var(--muted); }
+
+  .hist { background:var(--card); border:1px solid var(--line); border-radius:var(--obj-radius); padding:10px 12px; margin-top:10px; }
+  .hist svg { display:block; width:100%; height:120px; }
+  .hist .cap { font-size:11px; color:var(--muted); margin-top:4px; }
+
+  .alloc { display:flex; height:14px; border-radius:3px; overflow:hidden; border:1px solid var(--line); margin-top:10px; }
+  .alloc span { display:block; height:100%; }
+  .alloc-legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:6px; font-size:11.5px; color:var(--muted); }
+  .alloc-legend i { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+
+  .search { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .search input { flex:1; min-width:200px; background:var(--card); color:var(--ink); border:1.5px solid var(--line-strong);
+    border-radius:999px; padding:8px 16px; font-family:var(--sans); font-size:14px; outline:none; }
+  .search input:focus { border-color:var(--clay); }
+  .search select { background:var(--card); color:var(--ink); border:1.5px solid var(--line-strong); border-radius:999px;
+    padding:7px 12px; font-family:var(--sans); font-size:13px; }
+
+  table.mk { width:100%; border-collapse:collapse; font-size:13px; }
+  table.mk th { text-align:right; font-size:11px; font-weight:700; color:var(--muted); padding:7px 8px; border-bottom:1px solid var(--line-strong); white-space:nowrap; }
+  table.mk th:first-child, table.mk td:first-child { text-align:left; }
+  table.mk td { text-align:right; padding:8px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; font-family:var(--mono); white-space:nowrap; }
+  table.mk td:first-child { font-family:var(--sans); }
+  table.mk tr.click { cursor:pointer; }
+  table.mk tr.click:hover td { background:var(--card-hover); }
+  table.mk .nm { font-weight:700; }
+  table.mk .tk { font-family:var(--mono); font-size:10.5px; color:var(--muted); display:block; }
+  table.mk .warn { font-family:var(--sans); font-size:10.5px; color:var(--clay); display:block; }
+  .tbl-wrap { overflow-x:auto; }
+  .empty { color:var(--muted); font-size:13px; padding:10px 0; }
+
+  .row-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .mk-btn { background:transparent; border:1.5px solid var(--line-strong); color:var(--muted); border-radius:999px; padding:6px 14px;
+    font-size:12px; font-weight:700; font-family:var(--sans); cursor:pointer; }
+  .mk-btn:hover { border-color:var(--ink); color:var(--ink); }
+  .mk-btn.danger:hover { border-color:var(--down); color:var(--down); }
+
+  /* 주문 창 */
+  .trade { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px; }
+  .trade .side { background:var(--card); border:1px solid var(--line); border-radius:var(--obj-radius); padding:12px 14px; }
+  .trade label { display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; }
+  .trade input { width:100%; box-sizing:border-box; background:var(--paper); color:var(--ink); border:1.5px solid var(--line-strong);
+    border-radius:6px; padding:8px 10px; font-family:var(--mono); font-size:15px; outline:none; }
+  .trade input:focus { border-color:var(--clay); }
+  .trade .calc { font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:6px; min-height:16px; }
+  .trade .go { margin-top:10px; width:100%; border:none; border-radius:6px; padding:9px; font-weight:800; font-size:13.5px; cursor:pointer; color:#fff; font-family:var(--sans); }
+  .trade .go.buy { background:var(--up); }
+  .trade .go.sell { background:var(--down); }
+  .trade .go:disabled { opacity:.35; cursor:not-allowed; }
+  .quick { display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+  .quick button { background:transparent; border:1px solid var(--line-strong); color:var(--muted); border-radius:999px; padding:2px 9px; font-size:11px; cursor:pointer; }
+  .quick button:hover { border-color:var(--ink); color:var(--ink); }
+  .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:var(--ink); color:var(--paper); padding:9px 16px;
+    border-radius:999px; font-size:13px; font-weight:700; z-index:80; opacity:0; transition:opacity .2s; pointer-events:none; }
+  .toast.on { opacity:1; }
+
+  @media (max-width:640px) {
+    .sum { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .sum .val { font-size:16px; }
+    .trade { grid-template-columns:1fr; }
+    table.mk { font-size:12px; }
+    table.mk .hide-m { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="index.html">글로벌 메가캡</a>
+  <a href="news.html">뉴스플로우</a>
+  <a href="mock.html" class="cur">모의투자</a>
+</div>
+<div class="kicker">모의투자 · 시총 TOP300 안에서만</div>
+<header>
+  <h1>모의투자</h1>
+  <span class="updated" id="updated"></span>
+</header>
+
+<div class="mk-notice">
+  <b>가상 계좌입니다.</b> 실제 돈은 오가지 않고, 기록은 <b>이 브라우저에만</b> 저장됩니다(다른 기기·다른 브라우저와 공유되지 않음).
+  사고팔 수 있는 종목은 <b>글로벌 메가캡 시총 TOP300</b>뿐입니다. 체결가는 트래커가 마지막으로 받은 시세이고, 모든 금액은 달러로 환산합니다.
+  연습과 확인을 위한 도구이며 투자 권유가 아닙니다.
+</div>
+
+<h2>내 계좌</h2>
+<div class="sum" id="sum"></div>
+<div class="hist" id="hist"></div>
+<div id="alloc"></div>
+
+<h2>보유 종목</h2>
+<div class="tbl-wrap" id="holdings"></div>
+
+<h2>종목 찾기 · TOP300</h2>
+<div class="h2-sub">이름이나 티커로 찾고, 행을 누르면 차트와 주문 창이 열립니다.</div>
+<div class="search">
+  <input id="q" type="search" placeholder="예: 엔비디아, NVDA, 맥케슨" autocomplete="off">
+  <select id="sec"><option value="">전체 섹터</option></select>
+</div>
+<div class="tbl-wrap" id="results" style="margin-top:10px"></div>
+
+<h2>거래 기록</h2>
+<div class="tbl-wrap" id="trades"></div>
+<div class="row-btns">
+  <button class="mk-btn" onclick="exportAcct()">계좌 내보내기(백업)</button>
+  <button class="mk-btn" onclick="document.getElementById('imp').click()">가져오기</button>
+  <input id="imp" type="file" accept="application/json" hidden onchange="importAcct(this.files[0])">
+  <button class="mk-btn danger" onclick="resetAcct()">처음부터 다시(초기화)</button>
+</div>
+
+<footer>
+  시세: 트래커 데이터(Yahoo Finance, 장중 매시간 갱신) · 환율: Yahoo Finance · 수수료·세금·배당은 반영하지 않습니다.
+  명단은 주 1회 바뀌며, TOP300에서 빠진 종목은 새로 살 수 없고 마지막 시세로 평가·매도만 됩니다.
+</footer>
+
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="theme.js?v=260901"></script>
+<script src="stocks-common.js?v=260901"></script>
+<script>
+const START_CASH = 100000;          // 가상 시작 자금(달러)
+const KEY = "mock-acct-v1";
+let DATA = null, FX = { USD: 1 }, UNI = {};   // UNI: ticker → stock (현재 TOP300)
+const byTicker = t => UNI[t];
+
+/* ── 계좌 상태 (localStorage) ── */
+function freshAcct() { return { created: today(), cash: START_CASH, pos: {}, trades: [], snaps: {} }; }
+function today() { return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }); }
+let A = freshAcct();
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.pos && typeof s.cash === "number") A = s; } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(A)); } catch (e) { toast("저장 실패: 브라우저 저장소를 쓸 수 없습니다"); } }
+
+/* ── 가격·환산 ── */
+const usd = n => (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pctS = v => v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+function usdPrice(s) { const r = FX[s.ccy]; return r ? s.price * r : null; }
+/* 보유 종목 평가가: TOP300에 있으면 최신 시세, 빠졌으면 마지막으로 본 시세 */
+function markPrice(tk) {
+  const s = UNI[tk], p = A.pos[tk];
+  if (s) { const u = usdPrice(s); if (u && p && DATA) { p.last = u; p.lastAt = DATA.updated; } return u ?? (p && p.last); }
+  return p ? p.last : null;
+}
+function totals() {
+  let mv = 0, cost = 0;
+  for (const tk in A.pos) { const p = A.pos[tk]; mv += p.qty * (markPrice(tk) || 0); cost += p.qty * p.avg; }
+  return { mv, cost, total: A.cash + mv };
+}
+
+/* ── 주문 ── */
+function trade(tk, side, qty) {
+  const s = UNI[tk];
+  qty = Math.floor(Number(qty));
+  if (!(qty > 0)) return toast("수량을 1주 이상 넣어 주세요");
+  const px = side === "buy" ? (s && usdPrice(s)) : markPrice(tk);
+  if (!px) return toast("시세나 환율이 없어 주문할 수 없습니다");
+  if (side === "buy") {
+    if (!s) return toast("TOP300 밖 종목은 새로 살 수 없습니다");
+    const amt = qty * px;
+    if (amt > A.cash + 1e-6) return toast("현금이 부족합니다");
+    const p = A.pos[tk] || { qty: 0, avg: 0, name: s.name, ccy: s.ccy, sector: s.sector };
+    p.avg = (p.avg * p.qty + amt) / (p.qty + qty); p.qty += qty; p.name = s.name; p.last = px; p.lastAt = DATA.updated;
+    A.pos[tk] = p; A.cash -= amt;
+  } else {
+    const p = A.pos[tk];
+    if (!p || p.qty < qty) return toast("보유 수량보다 많이 팔 수 없습니다");
+    A.cash += qty * px; p.qty -= qty;
+    if (p.qty === 0) delete A.pos[tk];
+  }
+  A.trades.unshift({ t: new Date().toISOString(), tk, name: (s || A.pos[tk] || {}).name || tk, side, qty, px, local: s ? s.price : null, ccy: s ? s.ccy : "" });
+  snap(); save(); renderAll(); if (modalTicker) renderModal();
+  toast(`${side === "buy" ? "매수" : "매도"} 체결 · ${(s || {}).name || tk} ${qty}주`);
+}
+window.doTrade = function (tk, side) {
+  const el = document.getElementById(side === "buy" ? "qb" : "qs");
+  trade(tk, side, el.value);
+};
+
+/* 하루에 하나씩 총자산을 남겨 추이를 그린다 */
+function snap() { if (!DATA) return; A.snaps[today()] = Math.round(totals().total * 100) / 100; }
+
+/* ── 렌더 ── */
+function renderSummary() {
+  const { mv, cost, total } = totals();
+  const pnl = total - START_CASH, open = mv - cost;
+  document.getElementById("sum").innerHTML = `
+    <div class="box"><div class="lbl">총자산</div><div class="val">${usd(total)}</div><div class="sub">시작 ${usd(START_CASH)} · ${A.created}</div></div>
+    <div class="box"><div class="lbl">전체 손익</div><div class="val ${cls(pnl)}">${usd(pnl)}</div><div class="sub ${cls(pnl)}">${pctS(pnl / START_CASH * 100)}</div></div>
+    <div class="box"><div class="lbl">보유 평가금액</div><div class="val">${usd(mv)}</div><div class="sub ${cls(open)}">평가손익 ${usd(open)}</div></div>
+    <div class="box"><div class="lbl">현금</div><div class="val">${usd(A.cash)}</div><div class="sub">${total ? (A.cash / total * 100).toFixed(1) : "0"}% 현금</div></div>`;
+
+  const ds = Object.keys(A.snaps).sort();
+  const hist = document.getElementById("hist");
+  if (ds.length < 2) { hist.innerHTML = `<div class="cap">총자산 추이는 들어온 날마다 하나씩 기록됩니다. 이틀째부터 선이 그려집니다.</div>`; }
+  else {
+    const vals = ds.map(d => A.snaps[d]); const lo = Math.min(...vals, START_CASH), hi = Math.max(...vals, START_CASH), rg = hi - lo || 1;
+    const X = i => (i / (vals.length - 1) * 100).toFixed(2), Y = v => (110 - (v - lo) / rg * 100).toFixed(2);
+    const pts = vals.map((v, i) => `${X(i)},${Y(v)}`).join(" ");
+    const up = vals[vals.length - 1] >= START_CASH;
+    hist.innerHTML = `<svg viewBox="0 0 100 120" preserveAspectRatio="none">
+      <line x1="0" x2="100" y1="${Y(START_CASH)}" y2="${Y(START_CASH)}" stroke="var(--chart-grid-zero)" stroke-dasharray="1.5 1.5" stroke-width=".4" vector-effect="non-scaling-stroke"/>
+      <polyline points="${pts}" fill="none" stroke="${up ? "var(--up)" : "var(--down)"}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+      <div class="cap">총자산 추이 · ${ds[0]} ~ ${ds[ds.length - 1]} · 점선 = 시작 자금</div>`;
+  }
+
+  // 섹터 비중(현금 포함)
+  const secs = {}; let tot = A.cash;
+  for (const tk in A.pos) { const v = A.pos[tk].qty * (markPrice(tk) || 0); const sc = (UNI[tk] || A.pos[tk]).sector || "기타"; secs[sc] = (secs[sc] || 0) + v; tot += v; }
+  const PAL = ["#b5482b", "#2f7d57", "#3b6ea8", "#c99a2e", "#7d5ba6", "#2a9d9a", "#a8485f", "#6b8e23", "#8a6d55", "#4a5d7a"];
+  const rows = Object.entries(secs).sort((a, b) => b[1] - a[1]);
+  const seg = rows.map(([k, v], i) => ({ k, v, c: PAL[i % PAL.length] }));
+  seg.push({ k: "현금", v: A.cash, c: "var(--line-strong)" });
+  document.getElementById("alloc").innerHTML = tot > 0 ? `<div class="alloc">${seg.map(x => `<span style="width:${x.v / tot * 100}%;background:${x.c}" title="${x.k}"></span>`).join("")}</div>
+    <div class="alloc-legend">${seg.map(x => `<span><i style="background:${x.c}"></i>${tcEsc(x.k)} ${(x.v / tot * 100).toFixed(1)}%</span>`).join("")}</div>` : "";
+}
+
+function renderHoldings() {
+  const tks = Object.keys(A.pos);
+  const box = document.getElementById("holdings");
+  if (!tks.length) { box.innerHTML = `<div class="empty">아직 보유 종목이 없습니다. 아래에서 종목을 찾아 사 보세요.</div>`; return; }
+  const { total } = totals();
+  const rows = tks.map(tk => { const p = A.pos[tk], m = markPrice(tk) || 0; return { tk, p, m, mv: p.qty * m, pl: (m - p.avg) * p.qty, plp: p.avg ? (m / p.avg - 1) * 100 : 0 }; })
+    .sort((a, b) => b.mv - a.mv);
+  box.innerHTML = `<table class="mk"><thead><tr><th>종목</th><th>수량</th><th class="hide-m">평균단가</th><th>현재가</th><th>평가금액</th><th>손익</th><th class="hide-m">비중</th></tr></thead><tbody>
+    ${rows.map(r => { const inU = !!UNI[r.tk]; return `<tr class="click" onclick="openModal('${r.tk}')">
+      <td><span class="nm">${tcEsc(r.p.name)}</span><span class="tk">${r.tk}</span>${inU ? "" : `<span class="warn">TOP300 이탈 · 마지막 시세(${r.p.lastAt || "–"})로 평가</span>`}</td>
+      <td>${r.p.qty.toLocaleString()}</td><td class="hide-m">${usd(r.p.avg)}</td><td>${usd(r.m)}</td><td>${usd(r.mv)}</td>
+      <td class="${cls(r.pl)}">${usd(r.pl)}<br><span style="font-size:11px">${pctS(r.plp)}</span></td><td class="hide-m">${(r.mv / total * 100).toFixed(1)}%</td></tr>`; }).join("")}
+  </tbody></table>`;
+}
+
+function renderResults() {
+  if (!DATA) return;
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const sec = document.getElementById("sec").value;
+  let list = DATA.stocks.filter(s => (!sec || s.sector === sec) && (!q || s.name.toLowerCase().includes(q) || s.ticker.toLowerCase().includes(q)));
+  list.sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+  const shown = q || sec ? list : list.slice(0, 30);
+  const box = document.getElementById("results");
+  if (!shown.length) { box.innerHTML = `<div class="empty">TOP300 안에 맞는 종목이 없습니다. 이 모의투자는 트래커의 시총 TOP300 안에서만 거래됩니다.</div>`; return; }
+  box.innerHTML = `<table class="mk"><thead><tr><th>종목</th><th>현재가</th><th class="hide-m">달러 환산</th><th>1일</th><th class="hide-m">1개월</th><th class="hide-m">보유</th></tr></thead><tbody>
+    ${shown.map(s => { const u = usdPrice(s), h = A.pos[s.ticker]; return `<tr class="click" onclick="openModal('${s.ticker}')">
+      <td><span class="nm">${tcEsc(s.name)}</span><span class="tk">${s.ticker} · ${tcEsc(s.sector)}${s.rank ? ` · 시총 ${s.rank}위` : ""}</span></td>
+      <td>${fmtPx(s.price, s.ccy)}</td><td class="hide-m">${u ? usd(u) : "환율 없음"}</td>
+      <td class="${cls(s.r1d)}">${fmt(s.r1d)}</td><td class="hide-m ${cls(s.r1m)}">${fmt(s.r1m)}</td><td class="hide-m">${h ? h.qty.toLocaleString() + "주" : ""}</td></tr>`; }).join("")}
+  </tbody></table>${q || sec ? "" : `<div class="empty">시총 상위 30개만 보입니다. 이름·티커를 넣거나 섹터를 고르면 300개 전체에서 찾습니다.</div>`}`;
+}
+
+function renderTrades() {
+  const box = document.getElementById("trades");
+  if (!A.trades.length) { box.innerHTML = `<div class="empty">거래 기록이 없습니다.</div>`; return; }
+  box.innerHTML = `<table class="mk"><thead><tr><th>시각</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th class="hide-m">금액</th></tr></thead><tbody>
+    ${A.trades.slice(0, 100).map(t => `<tr><td>${new Date(t.t).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+      <td style="text-align:right;font-family:var(--sans)">${tcEsc(t.name)}</td><td class="${t.side === "buy" ? "pos" : "neg"}" style="font-family:var(--sans)">${t.side === "buy" ? "매수" : "매도"}</td>
+      <td>${t.qty.toLocaleString()}</td><td>${usd(t.px)}${t.local != null && t.ccy !== "USD" ? `<br><span style="font-size:10.5px;color:var(--muted)">${fmtPx(t.local, t.ccy)}</span>` : ""}</td><td class="hide-m">${usd(t.qty * t.px)}</td></tr>`).join("")}
+  </tbody></table>`;
+}
+
+function renderAll() { renderSummary(); renderHoldings(); renderResults(); renderTrades(); }
+
+/* 상세 창: 차트 + 주문 */
+function renderModal() {
+  const tk = modalTicker, s = UNI[tk], p = A.pos[tk];
+  if (!s && !p) return;
+  const u = s ? usdPrice(s) : null, mark = markPrice(tk);
+  const maxBuy = u ? Math.floor(A.cash / u) : 0, have = p ? p.qty : 0;
+  const head = s
+    ? `<h3>${tcEsc(s.name)} <span style="color:var(--muted);font-size:14px">${s.ticker} · ${tcEsc(s.sector)}${s.rank ? " · 시총 " + s.rank + "위" : ""}</span></h3>
+       <span class="px">${fmtPx(s.price, s.ccy)}</span>${s.ccy !== "USD" && u ? `<span style="color:var(--muted);font-size:13px">≈ ${usd(u)}</span>` : ""}<span class="${cls(s.r1d)}" style="font-weight:700">${fmt(s.r1d)}</span>`
+    : `<h3>${tcEsc(p.name)} <span style="color:var(--muted);font-size:14px">${tk} · TOP300 이탈</span></h3><span class="px">${usd(mark)}</span>`;
+  document.getElementById("modal").innerHTML = `
+    <div class="modal-head">${head}<button class="close" onclick="closeModal()">✕</button></div>
+    ${s ? `<div class="modal-chips">
+      <span class="chip">1주 <b class="${cls(s.r1w)}">${fmt(s.r1w)}</b></span><span class="chip">1개월 <b class="${cls(s.r1m)}">${fmt(s.r1m)}</b></span>
+      <span class="chip">3개월 <b class="${cls(s.r3m)}">${fmt(s.r3m)}</b></span><span class="chip">YTD <b class="${cls(s.ytd)}">${fmt(s.ytd)}</b></span>
+      <span class="chip">52주고점대비 <b class="${cls(s.from_high)}">${fmt(s.from_high)}</b></span>
+      ${s.pe_next ? `<span class="chip per">내년 PER <b>${s.pe_next}</b></span>` : ""}</div>
+    <div class="tabs">${WINDOWS.map(w => `<button class="${w.d === modalWin ? "active" : ""}" onclick="setModalWin(${w.d})">${w.l}</button>`).join("")}</div>
+    ${candleSVG(s, modalWin + 1)}` : `<p class="note">TOP300에서 빠진 종목이라 새로 살 수 없습니다. 마지막으로 본 시세(${p.lastAt || "–"})로 팔 수 있습니다.</p>`}
+    ${p ? `<div class="modal-chips"><span class="chip">보유 <b>${have.toLocaleString()}주</b></span><span class="chip">평균단가 <b>${usd(p.avg)}</b></span>
+      <span class="chip">평가손익 <b class="${cls(mark - p.avg)}">${usd((mark - p.avg) * have)} (${pctS((mark / p.avg - 1) * 100)})</b></span></div>` : ""}
+    <div class="trade">
+      <div class="side"><label>매수 수량 · 현금 ${usd(A.cash)} · 최대 ${maxBuy.toLocaleString()}주</label>
+        <input id="qb" type="number" min="1" step="1" inputmode="numeric" placeholder="0" ${s && u ? "" : "disabled"} oninput="calcQ('qb','cb',${u || 0})">
+        <div class="quick">${[0.1, 0.25, 0.5, 1].map(f => `<button onclick="setQ('qb','cb',${Math.floor(maxBuy * f)},${u || 0})">${f === 1 ? "최대" : Math.round(f * 100) + "%"}</button>`).join("")}</div>
+        <div class="calc" id="cb"></div>
+        <button class="go buy" ${s && u ? "" : "disabled"} onclick="doTrade('${tk}','buy')">매수</button></div>
+      <div class="side"><label>매도 수량 · 보유 ${have.toLocaleString()}주</label>
+        <input id="qs" type="number" min="1" step="1" inputmode="numeric" placeholder="0" ${have ? "" : "disabled"} oninput="calcQ('qs','cs',${mark || 0})">
+        <div class="quick">${[0.25, 0.5, 1].map(f => `<button onclick="setQ('qs','cs',${Math.floor(have * f)},${mark || 0})">${f === 1 ? "전량" : Math.round(f * 100) + "%"}</button>`).join("")}</div>
+        <div class="calc" id="cs"></div>
+        <button class="go sell" ${have ? "" : "disabled"} onclick="doTrade('${tk}','sell')">매도</button></div>
+    </div>
+    <p class="note" style="font-size:12px;margin-top:10px">체결가는 트래커 마지막 시세(${DATA ? DATA.updated : "–"})를 달러로 환산한 가격입니다. 실제 시장의 호가·체결과 다를 수 있습니다.</p>
+    ${s ? newsHTML(s) : ""}`;
+}
+window.calcQ = (inp, out, px) => { const q = Math.floor(Number(document.getElementById(inp).value) || 0); document.getElementById(out).textContent = q > 0 ? `≈ ${usd(q * px)}` : ""; };
+window.setQ = (inp, out, q, px) => { document.getElementById(inp).value = q || ""; calcQ(inp, out, px); };
+
+/* 백업·초기화 */
+window.exportAcct = function () {
+  const blob = new Blob([JSON.stringify(A, null, 1)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `mock-portfolio-${today()}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+window.importAcct = function (f) {
+  if (!f) return;
+  f.text().then(t => { const d = JSON.parse(t); if (!d || typeof d.cash !== "number" || !d.pos) throw 0; A = d; save(); renderAll(); toast("계좌를 가져왔습니다"); })
+    .catch(() => toast("올바른 백업 파일이 아닙니다"));
+};
+window.resetAcct = function () {
+  if (!confirm("가상 계좌를 처음 상태($100,000 현금)로 되돌릴까요? 보유 종목과 거래 기록이 모두 지워집니다.")) return;
+  A = freshAcct(); snap(); save(); renderAll(); toast("초기화했습니다");
+};
+function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2200); }
+function tcEsc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+window.__rerender = function () { if (DATA) renderAll(); if (modalTicker && document.getElementById("modal-bg").classList.contains("open")) renderModal(); };
+
+document.getElementById("q").addEventListener("input", renderResults);
+document.getElementById("sec").addEventListener("change", renderResults);
+
+fetch("megacap.json?t=" + Date.now()).then(r => r.json()).then(d => {
+  DATA = d; FX = Object.assign({ USD: 1 }, d.fx || {});
+  d.stocks.forEach(s => { UNI[s.ticker] = s; });
+  const secs = [...new Set(d.stocks.map(s => s.sector))].sort();
+  document.getElementById("sec").innerHTML += secs.map(s => `<option>${tcEsc(s)}</option>`).join("");
+  const noFx = d.stocks.filter(s => !FX[s.ccy]).length;
+  document.getElementById("updated").textContent = `시세 ${d.updated} · ${d.count}종목${noFx ? ` · 환율 없는 ${noFx}종목은 거래 불가` : ""}`;
+  snap(); save(); renderAll();
+}).catch(() => { document.getElementById("results").innerHTML = `<p style="color:var(--down)">데이터를 불러올 수 없습니다.</p>`; });
+renderAll();
+</script>
+</body>
+</html>

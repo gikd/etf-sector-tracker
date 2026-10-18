@@ -308,6 +308,21 @@ def translate_news(items):
     return items
 
 
+def fetch_fx(ccys):
+    """모의투자용 환율: 통화 1단위가 몇 달러인지. 실패한 통화는 빠지고 페이지에서 거래가 막힌다."""
+    fx = {"USD": 1.0}
+    for c in sorted(set(ccys) - {"USD"}):
+        try:
+            sym = "GBP" if c == "GBp" else c                                    # 영국 펜스는 파운드의 1/100
+            raw = json.loads(http_get(API.format(t=f"{sym}=X")))
+            per_usd = raw["chart"]["result"][0]["meta"]["regularMarketPrice"]   # 1달러당 통화 단위
+            if per_usd:
+                fx[c] = round(1 / per_usd / (100 if c == "GBp" else 1), 8)
+        except Exception as e:
+            print(f"  환율 실패 {c}: {e}")
+    return fx
+
+
 def fwd_pe(price, eps):
     return round(price / eps, 1) if price and eps and eps > 0 else None
 
@@ -339,6 +354,7 @@ def main():
         "updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M KST"),
         "universe_updated": universe_updated,
         "count": len(stocks),
+        "fx": fetch_fx(x["ccy"] for x in stocks),
         "stocks": stocks,
     }
     payload = json.dumps(out, ensure_ascii=False)
