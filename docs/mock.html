@@ -76,6 +76,15 @@
     border-radius:999px; font-size:13px; font-weight:700; z-index:80; opacity:0; transition:opacity .2s; pointer-events:none; }
   .toast.on { opacity:1; }
 
+  .auth { display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--card); border:1px solid var(--line);
+    border-radius:var(--obj-radius); padding:10px 12px; margin-bottom:12px; font-size:13px; }
+  .auth input { background:var(--paper); color:var(--ink); border:1.5px solid var(--line-strong); border-radius:6px; padding:6px 10px;
+    font-family:var(--sans); font-size:13px; width:140px; outline:none; }
+  .auth input:focus { border-color:var(--clay); }
+  .auth .who { font-weight:800; }
+  .auth .hint { flex-basis:100%; font-size:11.5px; color:var(--muted); line-height:1.6; }
+  .auth label { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:12.5px; cursor:pointer; }
+  table.mk tr.me td { background:rgba(var(--clay-rgb),.10); }
   @media (max-width:640px) {
     .sum { grid-template-columns:repeat(2, minmax(0,1fr)); }
     .sum .val { font-size:16px; }
@@ -98,12 +107,13 @@
 </header>
 
 <div class="mk-notice">
-  <b>가상 계좌입니다.</b> 실제 돈은 오가지 않고, 기록은 <b>이 브라우저에만</b> 저장됩니다(다른 기기·다른 브라우저와 공유되지 않음).
+  <b>가상 계좌입니다.</b> 실제 돈은 오가지 않습니다. 로그인하지 않으면 기록은 <b>이 브라우저에만</b> 남고, 로그인하면 서버 계좌로 어느 기기에서나 이어집니다.
   사고팔 수 있는 종목은 <b>글로벌 메가캡 시총 TOP300</b>뿐입니다. 체결가는 트래커가 마지막으로 받은 시세이고, 모든 금액은 달러로 환산합니다.
   연습과 확인을 위한 도구이며 투자 권유가 아닙니다.
 </div>
 
 <h2>내 계좌</h2>
+<div class="auth" id="auth"></div>
 <div class="sum" id="sum"></div>
 <div class="hist" id="hist"></div>
 <div id="alloc"></div>
@@ -119,11 +129,16 @@
 </div>
 <div class="tbl-wrap" id="results" style="margin-top:10px"></div>
 
+<h2>순위표 · 재미로만</h2>
+<div class="mk-notice" style="margin-bottom:10px"><b>재미로만 봐 주세요.</b> 가상 계좌의 손익 순위일 뿐, 투자 실력이나 종목 추천을 뜻하지 않습니다.
+  로그인한 계정 중 <b>순위표 공개에 동의하고 한 번 이상 거래한 계정</b>만 보이며, 10분마다 갱신됩니다.</div>
+<div class="tbl-wrap" id="board"></div>
+
 <h2>거래 기록</h2>
 <div class="tbl-wrap" id="trades"></div>
 <div class="row-btns">
   <button class="mk-btn" onclick="exportAcct()">계좌 내보내기(백업)</button>
-  <button class="mk-btn" onclick="document.getElementById('imp').click()">가져오기</button>
+  <button class="mk-btn" id="impBtn" onclick="document.getElementById('imp').click()">가져오기</button>
   <input id="imp" type="file" accept="application/json" hidden onchange="importAcct(this.files[0])">
   <button class="mk-btn danger" onclick="resetAcct()">처음부터 다시(초기화)</button>
 </div>
@@ -141,6 +156,19 @@
 <script>
 const START_CASH = 100000;          // 가상 시작 자금(달러)
 const KEY = "mock-acct-v1";
+/* 로그인 계좌는 묘수 사이트 서버(myosuview.com/api/mock)에 저장·체결. ?api= 로 개발 서버를 가리킬 수 있다 */
+const API = (new URLSearchParams(location.search).get("api") || "https://myosuview.com") + "/api/mock";
+let TOKEN = null, NICK = null, PUBLIC = false;
+try { TOKEN = localStorage.getItem("mock-token"); NICK = localStorage.getItem("mock-nick"); } catch (e) {}
+async function api(path, opt = {}) {
+  const r = await fetch(API + path, { ...opt, headers: { "content-type": "application/json", ...(TOKEN ? { authorization: "Bearer " + TOKEN } : {}), ...(opt.headers || {}) } });
+  const d = await r.json().catch(() => ({ error: "서버 응답을 읽지 못했습니다" }));
+  if (r.status === 401 && TOKEN && path !== "/auth") { logout(true); }
+  if (!r.ok) throw new Error(d.error || "요청 실패");
+  return d;
+}
+function useServer(d) { A = d.acct; NICK = d.nick; PUBLIC = !!d.public; }
+let LOCAL_A = null;   // 로그아웃하면 돌아갈 이 브라우저의 계좌
 let DATA = null, FX = { USD: 1 }, UNI = {};   // UNI: ticker → stock (현재 TOP300)
 const byTicker = t => UNI[t];
 
@@ -149,7 +177,8 @@ function freshAcct() { return { created: today(), cash: START_CASH, pos: {}, tra
 function today() { return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }); }
 let A = freshAcct();
 try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.pos && typeof s.cash === "number") A = s; } catch (e) {}
-function save() { try { localStorage.setItem(KEY, JSON.stringify(A)); } catch (e) { toast("저장 실패: 브라우저 저장소를 쓸 수 없습니다"); } }
+function save() { if (TOKEN) return; try { localStorage.setItem(KEY, JSON.stringify(A)); } catch (e) { toast("저장 실패: 브라우저 저장소를 쓸 수 없습니다"); } }
+LOCAL_A = A;
 
 /* ── 가격·환산 ── */
 const usd = n => (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -168,7 +197,13 @@ function totals() {
 }
 
 /* ── 주문 ── */
-function trade(tk, side, qty) {
+async function trade(tk, side, qty) {
+  if (TOKEN) {
+    try { useServer(await api("/trade", { method: "POST", body: JSON.stringify({ tk, side, qty: Math.floor(Number(qty)) }) })); }
+    catch (e) { return toast(e.message); }
+    renderAll(); if (modalTicker) renderModal(); loadBoard();
+    const s0 = UNI[tk]; return toast(`${side === "buy" ? "매수" : "매도"} 체결 · ${(s0 || {}).name || tk} ${Math.floor(Number(qty))}주`);
+  }
   const s = UNI[tk];
   qty = Math.floor(Number(qty));
   if (!(qty > 0)) return toast("수량을 1주 이상 넣어 주세요");
@@ -276,7 +311,49 @@ function renderTrades() {
   </tbody></table>`;
 }
 
-function renderAll() { renderSummary(); renderHoldings(); renderResults(); renderTrades(); }
+function renderAuth() {
+  const el = document.getElementById("auth");
+  document.getElementById("impBtn").style.display = TOKEN ? "none" : "";
+  if (TOKEN) {
+    el.innerHTML = `<span class="who">${tcEsc(NICK)}</span><span style="color:var(--muted)">님 · 서버 계좌</span>
+      <label><input type="checkbox" ${PUBLIC ? "checked" : ""} onchange="setPublic(this.checked)" style="width:auto"> 순위표에 내 닉네임 보이기</label>
+      <button class="mk-btn" onclick="logout()">로그아웃</button>`;
+  } else {
+    el.innerHTML = `<input id="nick" placeholder="닉네임" autocomplete="username" maxlength="16"><input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password" maxlength="64"
+      onkeydown="if(event.key==='Enter')auth('login')">
+      <button class="mk-btn" onclick="auth('login')">로그인</button><button class="mk-btn" onclick="auth('register')">가입</button>
+      <span class="hint">로그인하면 어느 기기에서나 같은 계좌를 쓰고 순위표에 참여할 수 있습니다. 가입은 닉네임(한글·영문·숫자 2~16자)과 비밀번호(4자 이상)뿐이고,
+      비밀번호 찾기가 없으니 다른 곳에서 쓰지 않는 비밀번호로 정해 주세요. 서버 계좌는 $100,000에서 새로 시작합니다.</span>`;
+  }
+}
+window.auth = async function (mode) {
+  const nick = document.getElementById("nick").value.trim(), pw = document.getElementById("pw").value;
+  try {
+    const d = await api("/auth", { method: "POST", body: JSON.stringify({ mode, nick, pw }) });
+    TOKEN = d.token; try { localStorage.setItem("mock-token", TOKEN); localStorage.setItem("mock-nick", d.nick); } catch (e) {}
+    useServer(d); renderAll(); loadBoard(); toast(mode === "register" ? "가입했습니다. $100,000으로 시작합니다" : `${d.nick}님, 어서 오세요`);
+  } catch (e) { toast(e.message); }
+};
+window.logout = function (expired) {
+  TOKEN = null; NICK = null; PUBLIC = false; try { localStorage.removeItem("mock-token"); localStorage.removeItem("mock-nick"); } catch (e) {}
+  A = LOCAL_A || freshAcct(); renderAll(); toast(expired ? "로그인이 만료됐습니다. 다시 로그인해 주세요" : "로그아웃했습니다. 이 브라우저 계좌로 돌아왔습니다");
+};
+window.setPublic = async function (on) {
+  try { useServer(await api("/account", { method: "PATCH", body: JSON.stringify({ public: on }) })); renderAuth(); loadBoard(); toast(on ? "순위표에 닉네임이 보입니다(10분 안에 반영)" : "순위표에서 내렸습니다"); }
+  catch (e) { toast(e.message); }
+};
+async function loadBoard() {
+  const box = document.getElementById("board");
+  try {
+    const d = await api("/leaderboard");
+    if (!d.rows.length) { box.innerHTML = `<div class="empty">아직 순위표에 오른 계정이 없습니다.</div>`; return; }
+    box.innerHTML = `<table class="mk"><thead><tr><th>순위</th><th>닉네임</th><th>가상 손익</th><th class="hide-m">보유 종목</th><th class="hide-m">시작</th></tr></thead><tbody>
+      ${d.rows.map((r, i) => `<tr class="${NICK && r.nick === NICK ? "me" : ""}"><td>${i + 1}</td><td style="text-align:right;font-family:var(--sans);font-weight:700">${tcEsc(r.nick)}</td>
+        <td class="${cls(r.ret)}">${pctS(r.ret)}</td><td class="hide-m">${r.n}</td><td class="hide-m">${r.since}</td></tr>`).join("")}</tbody></table>
+      <div class="empty">시세 기준 ${d.updated} · 재미로만 봐 주세요</div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">순위표를 불러오지 못했습니다.</div>`; }
+}
+function renderAll() { renderAuth(); renderSummary(); renderHoldings(); renderResults(); renderTrades(); }
 
 /* 상세 창: 차트 + 주문 */
 function renderModal() {
@@ -325,12 +402,13 @@ window.exportAcct = function () {
 };
 window.importAcct = function (f) {
   if (!f) return;
-  f.text().then(t => { const d = JSON.parse(t); if (!d || typeof d.cash !== "number" || !d.pos) throw 0; A = d; save(); renderAll(); toast("계좌를 가져왔습니다"); })
+  f.text().then(t => { const d = JSON.parse(t); if (!d || typeof d.cash !== "number" || !d.pos) throw 0; if (TOKEN) throw 0; A = d; LOCAL_A = A; save(); renderAll(); toast("계좌를 가져왔습니다"); })
     .catch(() => toast("올바른 백업 파일이 아닙니다"));
 };
 window.resetAcct = function () {
   if (!confirm("가상 계좌를 처음 상태($100,000 현금)로 되돌릴까요? 보유 종목과 거래 기록이 모두 지워집니다.")) return;
-  A = freshAcct(); snap(); save(); renderAll(); toast("초기화했습니다");
+  if (TOKEN) { api("/account", { method: "PATCH", body: JSON.stringify({ reset: true }) }).then(d => { useServer(d); renderAll(); loadBoard(); toast("초기화했습니다"); }).catch(e => toast(e.message)); return; }
+  A = freshAcct(); LOCAL_A = A; snap(); save(); renderAll(); toast("초기화했습니다");
 };
 function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2200); }
 function tcEsc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -346,7 +424,8 @@ fetch("megacap.json?t=" + Date.now()).then(r => r.json()).then(d => {
   document.getElementById("sec").innerHTML += secs.map(s => `<option>${tcEsc(s)}</option>`).join("");
   const noFx = d.stocks.filter(s => !FX[s.ccy]).length;
   document.getElementById("updated").textContent = `시세 ${d.updated} · ${d.count}종목${noFx ? ` · 환율 없는 ${noFx}종목은 거래 불가` : ""}`;
-  snap(); save(); renderAll();
+  if (TOKEN) api("/account").then(useServer).catch(() => {}).finally(renderAll); else { snap(); save(); renderAll(); }
+  loadBoard();
 }).catch(() => { document.getElementById("results").innerHTML = `<p style="color:var(--down)">데이터를 불러올 수 없습니다.</p>`; });
 renderAll();
 </script>
