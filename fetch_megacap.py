@@ -16,12 +16,13 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 HIST_DAYS = 130
-API = "https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=1y&interval=1d"
+API = "https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=3y&interval=1d"
 NEWS_RSS = "https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
 TRANSLATE = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q={q}"
 DOCS = Path(__file__).parent / "docs"
 UNIVERSE = DOCS / "megacap_universe.json"
 OUT = DOCS / "megacap.json"
+OUT_WEEKLY = DOCS / "megacap_weekly.json"   # 1년·3년 차트용 주봉(모달에서 탭을 누를 때만 불러옴)
 
 # ── 뉴스 선별(중도): 대형 언론·공식 릴리스는 채택 / 애그리게이터·SEO는 차단 /
 #    그 외(중간 출처)는 실적·M&A·소송 등 중대 이벤트일 때만 구제. 정크 헤드라인·근접중복 제거. 종목당 NEWS_KEEP개. ──
@@ -134,6 +135,26 @@ def ytd_pct(dates, close):
     return round((close[-1] / base - 1) * 100, 2) if base else None
 
 
+def weekly(rows):
+    """일봉 rows → 주봉(월요일 시작 주 단위). 날짜는 그 주 첫 거래일."""
+    out = {"d": [], "o": [], "h": [], "l": [], "c": [], "v": []}
+    key = None
+    for t, _a, o, h, l, c, v in rows:
+        if o is None or h is None or l is None:
+            continue
+        dt = datetime.fromtimestamp(t, tz=timezone.utc)
+        k = dt.isocalendar()[:2]
+        if k != key:
+            key = k
+            out["d"].append(dt.strftime("%Y-%m-%d"))
+            out["o"].append(round(o, 2)); out["h"].append(round(h, 2))
+            out["l"].append(round(l, 2)); out["c"].append(round(c, 2)); out["v"].append(v)
+        else:
+            out["h"][-1] = max(out["h"][-1], round(h, 2)); out["l"][-1] = min(out["l"][-1], round(l, 2))
+            out["c"][-1] = round(c, 2); out["v"][-1] += v
+    return out
+
+
 def fetch(sym, retries=3):
     for attempt in range(retries):
         try:
@@ -152,8 +173,9 @@ def fetch(sym, retries=3):
                 return None
             dates = [datetime.fromtimestamp(r[0], tz=timezone.utc).strftime("%Y-%m-%d") for r in rows]
             close = [r[1] for r in rows]
-            high = max(close)
-            low = min(close)
+            yr = close[-252:]   # 52주 고점·저점은 최근 1년만
+            high = max(yr)
+            low = min(yr)
             n = HIST_DAYS
             return {
                 "price": round(close[-1], 2),
@@ -171,6 +193,7 @@ def fetch(sym, retries=3):
                     "c": [round(r[5], 2) for r in rows[-n:]],
                     "v": [r[6] for r in rows[-n:]],
                 },
+                "_weekly": weekly(rows),
             }
         except Exception as e:
             if attempt == retries - 1:
@@ -321,11 +344,12 @@ def main():
         print("뉴스 한국어 번역 중...")
         news = list(ex.map(translate_news, news))
 
-    stocks, failed = [], []
+    stocks, failed, weekly_by_ticker = [], [], {}
     for m, d, nw in zip(members, quotes, news):
         if d is None:
             failed.append(m["ticker"])
             continue
+        weekly_by_ticker[m["ticker"]] = d.pop("_weekly")
         item = {"name": m["name"], "ticker": m["ticker"], "sector": m["sector"], **d, "news": nw}
         if m.get("mcap_b") is not None:
             item["mcap_b"] = m["mcap_b"]
@@ -343,6 +367,8 @@ def main():
     }
     payload = json.dumps(out, ensure_ascii=False)
     OUT.write_text(payload, encoding="utf-8")
+    OUT_WEEKLY.write_text(json.dumps({"updated": out["updated"], "stocks": weekly_by_ticker},
+                                     ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     size_kb = OUT.stat().st_size // 1024
     print(f"완료: {len(stocks)}개 저장 → {OUT} ({size_kb}KB)" + (f" (실패: {failed})" if failed else ""))
 

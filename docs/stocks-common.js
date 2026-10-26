@@ -7,7 +7,14 @@ const CCY = {
   GBp: { s: "", d: 1, suf: "p" }, JPY: { s: "¥", d: 0 }, HKD: { s: "HK$", d: 2 },
   CNY: { s: "CN¥", d: 2 }, TWD: { s: "NT$", d: 1 }, SAR: { s: "﷼", d: 2 },
 };
-const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }];
+const WINDOWS = [{ d: 21, l: "1개월" }, { d: 63, l: "3개월" }, { d: 126, l: "6개월" }, { d: 252, l: "1년" }, { d: 756, l: "3년" }];
+/* 1년·3년은 주봉(megacap_weekly.json) — 탭을 처음 누를 때 한 번만 불러온다 */
+let WEEKLY = null, weeklyLoading = null;
+function loadWeekly() {
+  if (!weeklyLoading) weeklyLoading = fetch("megacap_weekly.json?t=" + Date.now()).then(r => r.json())
+    .then(d => { WEEKLY = d.stocks || {}; }).catch(() => { WEEKLY = {}; });
+  return weeklyLoading;
+}
 
 const fmt = v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 const cls = v => v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "";
@@ -26,10 +33,13 @@ function spark(values) {
 
 /* 일봉 캔들 + 거래량 (색은 CSS 변수 → 테마 추종) */
 function candleSVG(s, win) {
-  const c = s.candles; if (!c) return "";
-  const n = Math.min(win, c.c.length);
+  const long = win > 130;
+  if (long && !WEEKLY) return `<p class="chart-wait" style="height:300px;display:flex;align-items:center;justify-content:center;color:var(--muted)">주봉을 불러오는 중…</p>`;
+  const c = long ? WEEKLY[s.ticker] : s.candles;
+  if (!c) return long ? `<p style="color:var(--muted)">이 종목은 장기 차트 데이터가 없습니다.</p>` : "";
+  const n = Math.min(long ? Math.round((win - 1) / 252 * 52) : win, c.c.length);
   const o = c.o.slice(-n), h = c.h.slice(-n), l = c.l.slice(-n), cl = c.c.slice(-n), v = c.v.slice(-n);
-  const dates = s.dates.slice(-n);
+  const dates = (long ? c.d : s.dates).slice(-n);
   /* viewBox 폭을 화면에 맞춰 축소 — 모바일에서 축 글자가 실제 크기(11px)로 렌더되게 */
   const narrow = (window.innerWidth || 880) < 640;
   const W = narrow ? Math.max(300, window.innerWidth - 52) : 880,
@@ -47,13 +57,13 @@ function candleSVG(s, win) {
     grid += `<line x1="${L}" x2="${L + pw}" y1="${Y(g)}" y2="${Y(g)}" stroke="var(--chart-grid)"/><text x="${W - R + 6}" y="${Y(g) + 4}" fill="var(--chart-axis)" font-size="11">${g >= 1000 ? (g / 1000).toFixed(0) + "k" : g.toFixed(step < 1 ? 1 : 0)}</text>`;
   let xl = "";
   for (let k = 0; k <= 4; k++) { const i = Math.round(k / 4 * (n - 1));
-    xl += `<text x="${X(i)}" y="${H - 6}" fill="var(--chart-axis)" font-size="11" text-anchor="${k === 0 ? "start" : k === 4 ? "end" : "middle"}">${dates[i]?.slice(5)}</text>`; }
+    xl += `<text x="${X(i)}" y="${H - 6}" fill="var(--chart-axis)" font-size="11" text-anchor="${k === 0 ? "start" : k === 4 ? "end" : "middle"}">${long ? dates[i]?.slice(0, 7).replace("-", ".") : dates[i]?.slice(5)}</text>`; }
   let body = "";
   for (let i = 0; i < n; i++) {
     const up = cl[i] >= o[i], col = up ? "var(--up)" : "var(--down)", x = X(i), yo = Y(o[i]), yc = Y(cl[i]);
     body += `<line x1="${x}" x2="${x}" y1="${Y(h[i])}" y2="${Y(l[i])}" stroke="${col}" stroke-width="1"/><rect x="${x - cw / 2}" y="${Math.min(yo, yc)}" width="${cw}" height="${Math.max(1, Math.abs(yo - yc))}" fill="${col}"/><rect x="${x - cw / 2}" y="${T + PH + 8 + (1 - v[i] / vmax) * VH}" width="${cw}" height="${v[i] / vmax * VH}" fill="${col}" opacity="0.45"/>`;
   }
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${grid}${xl}<text x="${L}" y="${T + PH + 22}" fill="var(--chart-axis)" font-size="10.5">거래량</text>${body}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${grid}${xl}<text x="${L}" y="${T + PH + 22}" fill="var(--chart-axis)" font-size="10.5">${long ? "거래량 · 주봉" : "거래량"}</text>${body}</svg>`;
 }
 
 /* 관련 뉴스 블록 */
@@ -68,6 +78,9 @@ function newsHTML(s) {
 let modalTicker = null, modalWin = 63;
 function openModal(t) { modalTicker = t; modalWin = 63; renderModal(); document.getElementById("modal-bg").classList.add("open"); document.body.style.overflow = "hidden"; }
 function closeModal() { document.getElementById("modal-bg").classList.remove("open"); document.body.style.overflow = ""; }
-function setModalWin(d) { modalWin = d; renderModal(); }
+function setModalWin(d) {
+  modalWin = d; renderModal();
+  if (d > 130 && !WEEKLY) loadWeekly().then(() => { if (modalWin === d) renderModal(); });
+}
 document.getElementById("modal-bg").addEventListener("click", e => { if (e.target.id === "modal-bg") closeModal(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
